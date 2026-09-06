@@ -68,7 +68,9 @@ jobs:
           # leaving publish as their first gate — where a failure is a failed
           # release.
           build-args: IMAGE_VERSION=v0.0.0-ci
-          cache-from: type=registry,ref=ghcr.io/knight-owl-dev/keystone-hook-diagrams:latest
+          # publish.yml writes this ref with mode=max, so a PR restores the
+          # deps stage and the chromium layer. :latest holds no cache manifest.
+          cache-from: type=registry,ref=ghcr.io/knight-owl-dev/keystone-hook-diagrams:buildcache-${{ matrix.arch }}
 
       - name: Test the image
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:ci

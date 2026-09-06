@@ -54,6 +54,9 @@ unverified binary source, or an unpinned dependency.
   `validate-action-pins` resolves the SHA against that exact tag.
 - **Keep issue numbers out of commit messages.** `Refs #NN` and `Fixes #NN`
   belong in the PR description.
+- **`publish.yml` writes `:buildcache-<arch>` and `ci.yml` reads it**, by
+  string, across two files. A rename on one side or a deleted tag on the other
+  is a cache miss: slower builds, green checks, no error.
 - **`main`'s ruleset names the CI jobs as required checks**, by string —
   including `Image (amd64)` and `Image (arm64)`, which `ci.yml` produces from a
   matrix. Renaming the job or changing an `arch` value leaves the required check
