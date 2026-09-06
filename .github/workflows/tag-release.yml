@@ -1,0 +1,54 @@
+name: Promote Release Tag
+
+# When a release/vX.Y.Z PR merges, promote tag vX.Y.Z onto the merge commit.
+# The tag is pushed with the GitHub App token (not GITHUB_TOKEN) so it triggers
+# the publish workflow.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Promote tag
+    # Only for a merged, same-repo release/v* branch. Same-repo guard keeps a
+    # fork PR (which gets no secrets, so the App token step would fail anyway)
+    # from reaching this path.
+    if: >-
+      github.event.pull_request.merged == true
+      && startsWith(github.event.pull_request.head.ref, 'release/v')
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        id: app-token
+        # contents:write to push the tag.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Promote tag
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          version="${HEAD_REF#release/}" # release/vX.Y.Z -> vX.Y.Z
+          ./scripts/validate-version-strict.sh "${version}" > /dev/null
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git tag "${version}"
+          git push origin "${version}"

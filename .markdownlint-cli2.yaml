@@ -1,0 +1,5 @@
+# gitignore reuses .gitignore, so ignore paths live in one place.
+gitignore: true
+
+config:
+  line-length: false

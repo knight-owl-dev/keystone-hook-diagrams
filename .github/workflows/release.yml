@@ -1,0 +1,66 @@
+name: Release
+
+# Open a release PR: stamp `version` on a release/vX.Y.Z branch. The version is
+# bumped from the latest release tag (bump) or set explicitly (version, which
+# wins if set). Merging that PR promotes tag vX.Y.Z (see tag-release.yml), which
+# triggers the publish workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Bump from the latest release tag"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      version:
+        description: "Explicit version (e.g. 1.3.0); overrides bump if set"
+        required: false
+        type: string
+      automerge:
+        description: "Auto-merge the release PR once checks pass"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Open release PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history + tags for the build-context diff base
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        id: app-token
+        # Needs contents:write (push the release branch) + pull-requests:write
+        # (open the PR) on this repo. Using the App — not GITHUB_TOKEN — so the
+        # release PR triggers CI.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          BUMP: ${{ inputs.bump }}
+          AUTOMERGE: ${{ inputs.automerge && '1' || '' }}
+        # An explicit version wins; otherwise bump from the latest release tag.
+        run: |
+          if [ -n "${VERSION}" ]; then
+            make release VERSION="${VERSION}"
+          else
+            make release BUMP="${BUMP}"
+          fi

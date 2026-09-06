@@ -1,0 +1,53 @@
+name: Renovate
+
+# Opens a PR when a dependency this repo pins has moved. What it scans and how
+# it groups is in .github/renovate.jsonc.
+#
+# Runs under the App this repo already uses, so no third party holds write
+# access. The upgrade is reviewed on the PR that introduces it: every required
+# check runs against the new dependency, so a red one is the upgrade rather
+# than the branch.
+
+on:
+  schedule:
+    # Monday at 07:00 UTC, ahead of the cve-monitor scan later the same morning.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+
+jobs:
+  renovate:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+
+    # No checkout: Renovate clones the repository itself and reads
+    # .github/renovate.jsonc from that clone. Upstream examples check out only
+    # to supply `configurationFile`, which is self-hosted *global* config —
+    # this run has none, so RENOVATE_REPOSITORIES is all it needs.
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        # Needs contents:write (push the update branch), pull-requests:write
+        # (open the PR) and issues:write (the dependency dashboard is an issue)
+        # on this repo. A PR opened with GITHUB_TOKEN would not trigger CI.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@39b914146caeff8cd512e61c8992f1d5913af85c # v46.2.5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          # The action is SHA-pinned, but its default renovate-version is a
+          # floating major tag — this names the container that actually runs.
+          # renovate: datasource=github-releases depName=renovatebot/renovate
+          renovate-version: '44.39.3'
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}

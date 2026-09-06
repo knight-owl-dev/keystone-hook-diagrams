@@ -1,0 +1,10 @@
+# The build context is the repo root, so this is an allowlist: everything is
+# excluded, and the paths the Dockerfile copies are named back in. A directory
+# added later stays out until it is named here.
+#
+# scripts/lib/context.sh reads these paths back to decide what a release
+# watches, so this file is load-bearing past the build.
+*
+!package.json
+!package-lock.json
+!src

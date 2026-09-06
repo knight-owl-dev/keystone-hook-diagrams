@@ -1,0 +1,96 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  // config:recommended is not extended. It pulls in :ignoreModulesAndTests,
+  // whose ignorePaths cover **/tests/** — and the bats suites there are what
+  // hold the release tooling honest. Its other presets address ecosystems this
+  // repo does not have.
+  "extends": ["docker:pinDigests"],
+
+  "dependencyDashboard": true,
+
+  // Commit subjects here are plain imperative sentences.
+  "semanticCommits": "disabled",
+
+  // No `schedule` here: renovate.yml's cron is the single owner of when this
+  // runs. A second window would make a workflow_dispatch outside it look like
+  // a no-op run.
+  "prConcurrentLimit": 5,
+
+  "ignorePaths": [
+    // Builds its image rather than pulling one — a :local tag has no registry
+    // to check.
+    "compose.yaml"
+  ],
+
+  "customManagers": [
+    {
+      // The ci-tools lint toolchain. Not a Dockerfile FROM and not a workflow
+      // `container:` — this repo does not build ci-tools, so the Makefile
+      // re-enters the published image and is the only place naming it.
+      "customType": "regex",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": [
+        "CI_TOOLS_IMAGE \\?= (?<depName>\\S+):(?<currentValue>[^:@\\s]+)@(?<currentDigest>sha256:[0-9a-f]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // A tool version passed as a plain action input is invisible to the
+      // github-actions manager. The `# renovate:` comment above such a line
+      // names what the value is.
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+[\\w-]+: '(?<currentValue>[^']+)'"
+      ]
+    }
+  ],
+
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["action"],
+      "labels": ["dependencies", "github-actions"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["action"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "actions (minor and patch)"
+    },
+
+    {
+      "matchDatasources": ["docker"],
+      "labels": ["dependencies", "docker"]
+    },
+
+    // One PR for both base digests. The node binary is copied onto this Alpine
+    // and linked against its musl, so a bump that moves one and not the other
+    // risks an ABI mismatch that only shows up at container start.
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["node", "alpine"],
+      "groupName": "base images"
+    },
+
+    // Trivy moves by hand. The scanner version is pinned in three places
+    // scripts/lib/validate-trivy-pins.sh holds equal, one of them a Makefile
+    // no manager reads — so a PR touching only the two workflows lands a tree
+    // that fails its own lint.
+    {
+      "matchPackageNames": ["aquasecurity/trivy", "aquasecurity/trivy-action"],
+      "enabled": false
+    },
+
+    // mermaid and puppeteer-core are grouped, not disabled: ci.yml's image job
+    // renders against the bump on both architectures, so the PR that proposes
+    // one is where it gets checked. They travel together because
+    // puppeteer-core drives the browser mermaid renders in.
+    {
+      "matchManagers": ["npm"],
+      "groupName": "renderer",
+      "labels": ["dependencies", "renderer"]
+    }
+  ]
+}

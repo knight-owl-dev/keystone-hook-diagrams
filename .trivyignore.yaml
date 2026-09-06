@@ -1,0 +1,23 @@
+# Suppressed CVEs for the keystone-hook-diagrams image.
+#
+# Each entry carries a `statement` (justification) and an `expired_at` date.
+# When the date passes the entry stops suppressing and the CVE reappears in the
+# scan, forcing a re-triage: bump the offending tool if a patched upstream
+# release shipped, or extend the date with a fresh justification.
+#
+# Suppressions only — the rest of the scan policy is shared across images in
+# the repo-root trivy.yaml. Trivy does NOT auto-detect this file: every
+# invocation names it explicitly (Makefile `--ignorefile`, the trivy-action
+# `trivyignores:` input), so a missing file fails the scan. See
+# docs/how-to/publish-image.md for the add/extend/remove workflow.
+#
+# Suppression entry example:
+#
+#  - id: CVE-YYYY-NNNNN
+#    statement: >-
+#      <package>: <short description>, fixed in <version>. Affects <tool>
+#      <version> — <why the practical risk is negligible here>. Tracking:
+#      #NN. Remove once <tool> ships a build on <fixed version>.
+#    expired_at: 2026-07-21  # ~45 days out, matching the dependency's cadence
+#
+vulnerabilities:

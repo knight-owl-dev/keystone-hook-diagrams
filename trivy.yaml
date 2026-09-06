@@ -1,0 +1,26 @@
+# Shared Trivy scan policy for every image.
+#
+# Read by `make scan` (--config), the publish workflow and the CVE monitor
+# (trivy-action `trivy-config:`). Suppressions are not set here — they vary by
+# image, so each call site passes its own --ignorefile / `trivyignores:`.
+#
+# Callers must not repeat these settings: trivy-action exports a TRIVY_* env
+# var for any input it receives, and env beats this file.
+#
+# The scanner version is pinned per call site — a config file cannot select its
+# own binary. Bump together; `make lint-actions` fails if they drift:
+#   Makefile          aquasec/trivy:<ver>       (Docker tag, bare)
+#   publish.yml       trivy-action `version:`   (GitHub tag, v-prefixed)
+#   cve-monitor.yml   trivy-action `version:`
+
+severity:
+  - CRITICAL
+  - HIGH
+
+# `make scan NO_IGNORE=1` overrides this with --exit-code 0.
+exit-code: 1
+
+vulnerability:
+  # Must stay nested: a top-level `ignore-unfixed` parses fine and does nothing.
+  # Rationale in docs/supply-chain-security.md.
+  ignore-unfixed: true
