@@ -41,14 +41,26 @@ cd "${REPO_ROOT}"
 # build-context baseline. Offline is tolerated (existing local tags are used).
 git fetch --tags --quiet 2> /dev/null || true
 
-# Resolve the target version. A bump verb derives the next version from the
-# latest release tag — the same source publish.yml keys off, so there is no
-# second source of truth to drift. An explicit X.Y.Z is the escape hatch for
-# version jumps or corrections.
+# The last released version, from both records that carry it. They agree in a
+# repo that has always released from here, and diverge in one that inherited a
+# stamp from elsewhere — the image has releases, this repo has no tags for them,
+# and the file is the only account of what is published. Taking the higher of
+# the two keeps a release from sorting below an image already in the registry.
+stamp=""
+if [[ -f version ]]; then
+  IFS= read -r stamp < version || true
+fi
+
+# Resolve the target version. A bump verb derives the next version from the last
+# release; an explicit X.Y.Z is the escape hatch for version jumps or
+# corrections.
 case "$1" in
   major | minor | patch)
     tags="$(git tag --list 'v*')"
-    current="$(max_strict_version <<< "${tags}")"
+    # max_strict_version takes one candidate per line, so the stamp joins the
+    # tags as another line rather than another argument.
+    candidates="${tags}"$'\n'"${stamp}"
+    current="$(max_strict_version <<< "${candidates}")"
     VERSION="$(bump_version "${current}" "$1")"
     echo "Latest release v${current} → bumping $1 → v${VERSION}"
     ;;
@@ -79,11 +91,6 @@ fi
 
 paths="$(image_source_paths "${REPO_ROOT}/.dockerignore")" || exit 1
 mapfile -t context <<< "${paths}"
-
-stamp=""
-if [[ -f version ]]; then
-  IFS= read -r stamp < version || true
-fi
 
 # An unknown baseline (never released, or the tag is missing) counts as changed.
 if [[ -n "${stamp}" ]] && git rev-parse --verify --quiet "v${stamp}^{commit}" > /dev/null; then

@@ -116,6 +116,31 @@ setup() {
 
 # ── bump_version ─────────────────────────────────────────────────────
 
+@test "max_strict_version picks the version file when no tag matches" {
+  # The release-from-a-fresh-repo case: the image has releases, this repo has no
+  # tags for them, and the stamp is the only record of what is published.
+  # Reading tags alone yields 0.0.0, and the release then sorts below an image
+  # already in the registry.
+  # shellcheck disable=SC1090
+  source "${LIB}"
+  run max_strict_version <<< "
+1.4.6"
+  assert_success
+  assert_output "1.4.6"
+}
+
+@test "max_strict_version prefers a tag ahead of the version file" {
+  # The steady state once this repo has released: the tag is at least the stamp,
+  # and a stale file cannot drag the next release backwards.
+  # shellcheck disable=SC1090
+  source "${LIB}"
+  run max_strict_version <<< "v1.5.0
+v1.4.6
+1.4.6"
+  assert_success
+  assert_output "1.5.0"
+}
+
 @test "bump_version patch increments the patch component" {
   # shellcheck disable=SC1090
   source "${LIB}"
