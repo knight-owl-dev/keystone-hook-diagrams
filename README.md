@@ -34,11 +34,8 @@ corepack.
 
 Chromium and the fonts carry no `apk` pin: Alpine keeps only the current build
 in its repository, so an exact version would break the build rather than hold it
-still. Where a CVE needs forcing, the Dockerfile names a `>=` floor instead —
-which also changes the layer's cache key, so a registry cache cannot keep
-serving the vulnerable build.
-
-Nothing here is a build arg, so the image takes none.
+still. Where a CVE needs forcing, the Dockerfile names a `>=` floor, and says
+why.
 
 mermaid never runs in Node. The server injects `mermaid.min.js` into a blank
 page and calls it there, because mermaid measures text to lay a diagram out and
@@ -48,14 +45,10 @@ resolve — so adding or dropping one changes a documented contract.
 
 ## The interface
 
-`HOOK_SOCKET` is required and has no default: it is the path this hook binds,
-mode `0666`, on a volume shared with the engine. Started without it, the hook
-exits rather than picking a name. Keystone settles two hooks claiming one
-language by sort order over socket filenames, so the name is the only lever over
-which renderer wins — and it is the caller's to pull, not this image's.
-
-Put it under `/hooks`, which the image ships at `1777` so a non-root UID can own
-the socket on a volume mounted there.
+`HOOK_SOCKET` is required and has no default: it names the path this hook binds,
+mode `0666`, on a volume shared with the engine. Put it under `/hooks`, which
+the image ships at `1777` so a non-root UID can own the socket on a volume
+mounted there.
 
 `describe` answers what this renderer is:
 
@@ -68,24 +61,13 @@ the socket on a volume mounted there.
 }
 ```
 
-`formats` partitions output formats by which of them share one answer, so
-Keystone's cache renders a diagram once for the three raster formats rather than
-three times.
+The three raster formats share one answer, so a diagram renders once for all of
+them. `identity` carries the image version and every setting under
+[Configuration](#configuration).
 
-`identity` moves whenever this image or a setting under
-[Configuration](#configuration) does, which is how that cache notices a diagram
-would now render differently. The string is hashed, never parsed.
-
-An image built without a version sends none, and Keystone then caches nothing:
-every block is asked for on every run. `make build` leaves `IMAGE_VERSION` at
-its default, so a local build's reply carries no identity.
-
-`diagnostics` reports what is wrong with the settings under
-[Configuration](#configuration), and is absent when there is nothing to say. An
-`error` stops the build before any block is read; a `warning` prints and the
-build continues. Keystone asks `describe` once a run, whether or not the
-manuscript holds a diagram — so a project that misconfigured this hook and wrote
-no diagrams still hears about it.
+An image built without a version sends no `identity`, and Keystone then caches
+nothing. `make build` leaves `IMAGE_VERSION` at its default, so a local build's
+reply carries none.
 
 `transform` returns one image per block:
 
@@ -98,12 +80,8 @@ no diagrams still hears about it.
 The EPUB SVG holds both palettes, mermaid's dark rules inside a
 `prefers-color-scheme` block, and each palette paints its own background.
 
-The diagram's `title:` frontmatter comes back as alt text, which Keystone turns
-into the figure caption; the title is blanked before rendering so it is not
-drawn twice. A block this renderer cannot handle comes back as
-`{"error": "…"}` — the hook's only channel to the author, since this container's
-stderr goes to a log nobody is reading. The two channels divide by whose fault
-it is: a block answers here, a setting answers on `describe`.
+The diagram's `title:` frontmatter comes back as alt text; the title is blanked
+before rendering so it is not drawn twice.
 
 ## Configuration
 
@@ -206,11 +184,11 @@ breaks something far away.
   is a Node server rather than socat in front of a CLI.
 - **The caller declares the healthcheck; the image ships none.** It tests for the
   socket, and only the caller knows that path. Started and listening are different
-  moments, and Keystone looks once, before the build begins. Losing that race is
-  not a failed build — it is a book with every diagram quietly rendered as a code
-  block. `start_interval` is what makes it prompt: without it Docker looks every
+  moments, and Keystone looks once, before the build begins. Losing that race
+  yields a book with every diagram quietly rendered as a code block, and a green
+  build. `start_interval` is what makes it prompt: without it Docker looks every
   few seconds inside the start period, and healthy lands about four seconds after
-  the socket appears. `start_interval` needs Docker Engine 25.0 or newer.
+  the socket appears. It needs Docker Engine 25.0 or newer.
 - **Nothing renders at a fixed size, and there is no lettering-size setting.**
   The container a figure is placed in owns scaling; this image owns resolution.
   mermaid lays a diagram out around its text, so a larger requested size produces
