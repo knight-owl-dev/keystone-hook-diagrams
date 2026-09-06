@@ -10,8 +10,9 @@ hands it a fenced code block and takes back Markdown plus the image that
 Markdown references, so the publishing engine knows nothing about mermaid —
 which is what lets a template add diagrams without an engine change.
 
-Any template can wire it, and any project can wire it into a template that
-does not; `core-diagrams` is the one that ships with it already wired.
+Any template can wire it, and a project can wire it into one that has not.
+[`core-diagrams`](https://github.com/knight-owl-dev/keystone-template-core-diagrams)
+ships with it already wired.
 
 The protocol and what a hook owes are in Keystone's manual:
 <https://keystone.knight-owl.dev/engine/writing-a-hook/>
@@ -37,11 +38,11 @@ in its repository, so an exact version would break the build rather than hold it
 still. Where a CVE needs forcing, the Dockerfile names a `>=` floor, and says
 why.
 
-mermaid never runs in Node. The server injects `mermaid.min.js` into a blank
-page and calls it there, because mermaid measures text to lay a diagram out and
-so needs font metrics and a DOM. The fonts are layout input rather than
-decoration, and the manual names them as what `KEYSTONE_DIAGRAMS_FONT` can
-resolve — so adding or dropping one changes a documented contract.
+mermaid runs in a browser page. The server injects `mermaid.min.js` into a blank
+one and calls it there, because mermaid measures text to lay a diagram out and so
+needs font metrics and a DOM. The fonts are layout input, and the manual names
+them as what `KEYSTONE_DIAGRAMS_FONT` can resolve — so adding or dropping one
+changes a documented contract.
 
 ## The interface
 
@@ -167,8 +168,7 @@ last one.
 
 ## Why it is shaped this way
 
-Each of these was a bug before it was a rule, and each is invisible until it
-breaks something far away.
+Each of these was a bug before it was a rule.
 
 - **`/hooks` ships in the image at `1777`.** Docker seeds an empty named volume
   from whichever container mounts it first, and this one starts before the
@@ -185,8 +185,8 @@ breaks something far away.
 - **The caller declares the healthcheck; the image ships none.** It tests for the
   socket, and only the caller knows that path. Started and listening are different
   moments, and Keystone looks once, before the build begins. Losing that race
-  yields a book with every diagram quietly rendered as a code block, and a green
-  build. `start_interval` is what makes it prompt: without it Docker looks every
+  yields a green build and a book with every diagram rendered as a code block.
+  `start_interval` is what makes it prompt: without it Docker looks every
   few seconds inside the start period, and healthy lands about four seconds after
   the socket appears. It needs Docker Engine 25.0 or newer.
 - **Nothing renders at a fixed size, and there is no lettering-size setting.**
