@@ -25,6 +25,11 @@ jobs:
     # one runner puts the arm64 leg under QEMU, where `npm ci` dies on an
     # illegal instruction — Node's own code, emulated.
     strategy:
+      # A scan that stops the release reports every architecture's findings at
+      # once; fixing them one at a time burns a version per finding. Cancelling
+      # a sibling also risks the mid-push cut the concurrency block above
+      # refuses.
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -61,8 +66,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
-      # The cache below exports to the registry, so login has to precede the
-      # first build, not the push.
+      # The build below reads its cache from GHCR, so login precedes it.
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -70,24 +74,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # `mode=max` caches every stage, not only what reaches the final image.
-      # The deps stage exists to produce /app/node_modules and is COPY --from'd
-      # out, so a final-image cache never records its `npm ci`.
-      #
-      # A registry ref and not type=gha: this workflow runs on tag pushes, an
-      # Actions cache is readable only from the ref that wrote it and from the
-      # default branch, and each release is its own tag — so nothing written
-      # here would ever be read back. One ref per arch; the two hold different
-      # layers. ci.yml reads the same refs.
       - name: Build for test
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
+          # Constrains the build to the arch the matrix names. Redundant on a
+          # native runner; without it, an arch paired with the wrong runner
+          # label builds that runner's platform and the index carries one
+          # architecture twice.
+          platforms: linux/${{ matrix.arch }}
           load: true
           tags: keystone-hook-diagrams:verify
           build-args: IMAGE_VERSION=${{ github.ref_name }}
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
-          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }},mode=max
 
       - name: Test the image
         # The publish gate, run against the versioned build so the cache
@@ -123,11 +122,27 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
+          platforms: linux/${{ matrix.arch }}
           build-args: IMAGE_VERSION=${{ github.ref_name }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           sbom: true
           provenance: true
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
+          # Exported after the scan: buildcache-<arch> is a tag on the same
+          # package as :latest, so a failed scan must leave none of its layers
+          # reachable. Costs no rebuild — the builder outlives the step, so
+          # this build hits local cache.
+          #
+          # A registry ref and not type=gha: this workflow runs on tag pushes,
+          # an Actions cache is readable only from the ref that wrote it and
+          # from the default branch, and each release is its own tag — so
+          # nothing written here would ever be read back. One ref per arch; the
+          # two hold different layers. ci.yml reads the same refs.
+          #
+          # mode=max caches every stage, not only what reaches the final image.
+          # The deps stage exists to produce /app/node_modules and is COPY
+          # --from'd out, so a final-image cache never records its `npm ci`.
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }},mode=max
 
       - name: Export digest
         env:
@@ -157,6 +172,9 @@ jobs:
       packages: write
 
     steps:
+      # Scoped to this run, so only the uploads above can match. The pattern
+      # succeeds on a short set, so the merge step's count is what gates a
+      # missing architecture.
       - name: Download digests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -177,24 +195,29 @@ jobs:
       # The per-arch manifests carry their own labels; annotations belong on the
       # index, which is what a registry UI and a consumer read first.
       - name: Create the manifest list
-        working-directory: /tmp/digests
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          # nullglob, or an empty directory leaves the literal '*' as the loop
-          # variable and the guard below sees one element rather than none.
+          # Globbed by absolute path. working-directory resolves before the
+          # script runs, so a merge-only re-run after the digests expire fails
+          # there rather than reaching the guard below.
+          #
+          # nullglob, or a missing or empty directory leaves the literal '*'
+          # as the loop variable and refs holds a ref to nothing.
           shopt -s nullglob
           refs=()
-          for digest in *; do
-            refs+=("${IMAGE}@sha256:${digest}")
+          for path in /tmp/digests/*; do
+            refs+=("${IMAGE}@sha256:${path##*/}")
           done
-          # A merge over no digests would tag nothing and exit 0, leaving the
-          # release with a tag that resolves to the previous image.
-          if [[ ${#refs[@]} -eq 0 ]]; then
-            echo "ERROR: no digests downloaded — nothing to merge" >&2
+          # One digest per architecture in the build matrix. A merge over a
+          # short set tags an index missing an architecture; over none it tags
+          # nothing and exits 0, leaving the release tag on the previous image.
+          # Raise this number when an architecture is added — forgetting fails
+          # the release.
+          if [[ ${#refs[@]} -ne 2 ]]; then
+            echo "ERROR: expected 2 digests, got ${#refs[@]} — refusing to merge" >&2
             exit 1
           fi
-          echo "merging ${#refs[@]} manifests"
           docker buildx imagetools create \
             --annotation "index:org.opencontainers.image.description=Mermaid diagram rendering hook for Keystone" \
             --annotation "index:org.opencontainers.image.source=https://github.com/knight-owl-dev/keystone-hook-diagrams" \
