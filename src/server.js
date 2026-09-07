@@ -39,8 +39,7 @@ const IMAGE_VERSION = (process.env.IMAGE_VERSION || '').trim();
 
 // PDF takes a raster because the typesetter reads the file itself and cannot
 // read SVG; DOCX and ODT take one to avoid depending on the writer's SVG
-// handling. EPUB takes SVG, which scales and can carry a palette that follows
-// the reader's theme.
+// handling. EPUB takes SVG, which scales to whatever page the reader is on.
 const RASTER_FORMATS = new Set(['pdf', 'docx', 'odt']);
 const VECTOR_FORMATS = new Set(['epub']);
 
@@ -68,11 +67,11 @@ const NOMINAL_WIDTH = 1600;
 // a renderer's settings are the renderer's, and nothing in the engine or the
 // protocol has a name for this one.
 //
-// Set, it renders both passes, which leaves the two identical and so drops the
-// dark alternative — the same rule a block naming its own theme follows. That
-// is the point as much as a side effect: an author who wants no dark diagrams
-// anywhere says so by choosing a palette.
-const PROJECT_THEME = (process.env.KEYSTONE_DIAGRAMS_THEME || '').trim();
+// Unset resolves here rather than at each use, so nothing downstream can tell
+// it from `default`. identity() included: two spellings would cache one render
+// under two keys.
+const PROJECT_THEME =
+  (process.env.KEYSTONE_DIAGRAMS_THEME || '').trim() || 'default';
 
 // The rest of the book's house style, applied the same way and equally the
 // renderer's own business.
@@ -94,8 +93,8 @@ const LOOKS = new Set(['classic', 'handDrawn']);
 // larger size produces is then scaled down further. Measured, a 2.8x change in
 // the requested size reached the page as 1.9x, and by a factor that differed per
 // diagram. What decides the size on the page is the width the wrapper gives it.
-function houseStyle(theme) {
-  const style = { theme };
+function houseStyle() {
+  const style = { theme: PROJECT_THEME };
   if (PROJECT_LOOK) style.look = PROJECT_LOOK;
   if (PROJECT_FONT) style.themeVariables = { fontFamily: PROJECT_FONT };
   return style;
@@ -114,7 +113,7 @@ function houseStyle(theme) {
 // server.js. Sending none costs the cache and keeps the renders correct.
 function identity() {
   if (!IMAGE_VERSION || IMAGE_VERSION === 'local') return null;
-  // Empty settings are spelled out, so unset stays distinct from set.
+  // An unset font or look is spelled empty, so unset stays distinct from set.
   return `${IMAGE_VERSION}/theme=${PROJECT_THEME}/font=${PROJECT_FONT}/look=${PROJECT_LOOK}`;
 }
 
@@ -137,7 +136,7 @@ function houseStyleDiagnostics() {
     `  Set ${setting} in project.conf to one of ${[...allowed].sort().join(', ')}, ` +
     'or leave it empty.';
 
-  if (PROJECT_THEME && !THEMES.has(PROJECT_THEME)) {
+  if (!THEMES.has(PROJECT_THEME)) {
     diagnostics.push({
       severity: 'error',
       message: wrong('KEYSTONE_DIAGRAMS_THEME', PROJECT_THEME, 'theme', THEMES),
@@ -238,8 +237,8 @@ function unavailableFonts(stack) {
 // hook can catch.
 const DIRECTIVES = new Set(['init', 'initialize']);
 
-// The id both renders of one diagram share, so the CSS mermaid emits under it
-// can be lifted from the dark render onto the light one.
+// The id mermaid keys a diagram's CSS to, and so what withBackground's rule
+// must select.
 const ELEMENT_ID = 'ks-diagram';
 
 // ── Reading the block ────────────────────────────────────────────────
@@ -383,13 +382,11 @@ function serialize(work) {
   return done;
 }
 
-// One render at one theme, and the background that theme resolved to.
+// One render, and the background its theme resolved to.
 //
-// mermaid.render replaces the whole style block each time, so the two themes
-// never contaminate each other. The background comes back from mermaid rather
-// than from a constant here, because an `init` directive in the block overrides
-// the theme asked for — so what was rendered is the only reliable account of
-// what was rendered.
+// The background comes back from mermaid rather than from a constant here,
+// because an `init` directive in the block overrides the theme asked for — so
+// what was rendered is the only reliable account of what was rendered.
 async function renderSvg(content, style) {
   return renderPage.evaluate(
     async (source, style, elementId) => {
@@ -442,47 +439,15 @@ function withIntrinsicSize(svg) {
     .replace(/^<svg\b/, `<svg width="${NOMINAL_WIDTH}" height="${height}"`);
 }
 
-// Fold the dark theme's rules into the light render under a media query.
+// Paint the diagram's own background into the SVG, opaquely.
 //
-// Both renders are keyed to the same element id, so the dark rules select the
-// light SVG's elements unchanged.
-//
-// Each palette paints its own background, and neither is ever transparent. The
-// query follows the operating system, while the page behind it is the reader's
-// to paint, and the two disagree routinely — a light page under a dark desktop
-// is the common case. A transparent dark render there puts pale strokes and
-// grey labels on white. Backgrounds on both keep the diagram legible however
-// the two are combined: at worst it is a box whose shade differs from the page.
-function withDarkPalette(light, dark) {
-  const darkCss = /<style>([\s\S]*?)<\/style>/.exec(dark.svg);
-  const lightCss = /<style>([\s\S]*?)<\/style>/.exec(light.svg);
-  if (!darkCss || !lightCss) return light.svg;
-
-  const paint = (background) =>
-    `#${ELEMENT_ID}{background-color:${background}}`;
-
-  // Identical rules mean the block pinned its own theme: an `init` directive
-  // overrides the theme asked for, so both passes came back as whatever the
-  // author chose. There is nothing to switch between, and switching the
-  // background alone would put a light theme's dark text on a dark panel — or
-  // a dark theme's pale text on a white one.
-  if (darkCss[1] === lightCss[1]) {
-    return light.svg.replace(
-      /<\/style>/,
-      `</style><style>${paint(light.background)}</style>`,
-    );
-  }
-
-  const palette =
-    '<style>' +
-    paint(light.background) +
-    '@media (prefers-color-scheme: dark){' +
-    darkCss[1] +
-    paint(dark.background) +
-    '}</style>';
-
-  // After the light style block, so equal specificity resolves this way.
-  return light.svg.replace(/<\/style>/, `</style>${palette}`);
+// Mermaid draws none, and the page behind an EPUB figure is the reader's to
+// theme: unpainted, a light palette's strokes vanish under night mode.
+function withBackground(diagram) {
+  return diagram.svg.replace(
+    /<\/style>/,
+    `</style><style>#${ELEMENT_ID}{background-color:${diagram.background}}</style>`,
+  );
 }
 
 // Rasterize an SVG.
@@ -493,9 +458,9 @@ function withDarkPalette(light, dark) {
 // size it is drawn at is free: it is laid out at RASTER_WIDTH and captured at
 // RASTER_SCALE, which puts any diagram near 400 DPI wherever the author places
 // it. The height follows the viewBox, so nothing is stretched.
-async function rasterize(light) {
+async function rasterize(diagram) {
   await rasterPage.setContent(
-    `<!doctype html><html><body style="margin:0;background:${light.background}">${light.svg}</body></html>`,
+    `<!doctype html><html><body style="margin:0;background:${diagram.background}">${diagram.svg}</body></html>`,
     { waitUntil: 'load' },
   );
 
@@ -529,16 +494,16 @@ async function transform(request) {
 
   const drawable = withoutTitle(content);
 
-  let light;
+  let diagram;
   try {
-    light = await renderSvg(drawable, houseStyle(PROJECT_THEME || 'default'));
+    diagram = await renderSvg(drawable, houseStyle());
   } catch (cause) {
     throw new Refused(refusalFrom(cause?.message, content));
   }
 
   let reply;
   if (raster) {
-    const png = await rasterize(light);
+    const png = await rasterize(diagram);
     reply = {
       body: `![${alt}](diagram.png)`,
       assets: [
@@ -550,8 +515,7 @@ async function transform(request) {
       ],
     };
   } else {
-    const dark = await renderSvg(drawable, houseStyle(PROJECT_THEME || 'dark'));
-    const svg = withIntrinsicSize(withDarkPalette(light, dark));
+    const svg = withIntrinsicSize(withBackground(diagram));
     reply = {
       body: `![${alt}](diagram.svg)`,
       assets: [

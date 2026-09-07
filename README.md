@@ -76,10 +76,10 @@ reply carries none.
 | --- | --- | --- |
 | `pdf` | PNG at 3× | the typesetter reads the file itself and cannot read SVG |
 | `docx`, `odt` | PNG at 3× | avoids depending on the writer's SVG handling |
-| `epub` | SVG | scales, and carries a palette that follows the reader's theme |
+| `epub` | SVG | scales to whatever page the reader is on |
 
-The EPUB SVG holds both palettes, mermaid's dark rules inside a
-`prefers-color-scheme` block, and each palette paints its own background.
+The EPUB SVG paints its own background, opaquely — mermaid draws none, and an
+unpainted diagram loses its strokes on a night-mode page.
 
 The diagram's `title:` frontmatter comes back as alt text; the title is blanked
 before rendering so it is not drawn twice.
@@ -91,7 +91,7 @@ Keystone forwards them without knowing what they are.
 
 | variable | accepts | unset |
 | --- | --- | --- |
-| `KEYSTONE_DIAGRAMS_THEME` | `default`, `base`, `dark`, `forest`, `neutral` | light, with a dark alternative |
+| `KEYSTONE_DIAGRAMS_THEME` | `default`, `base`, `dark`, `forest`, `neutral` | `default` |
 | `KEYSTONE_DIAGRAMS_LOOK` | `classic`, `handDrawn` | `classic` |
 | `KEYSTONE_DIAGRAMS_FONT` | a CSS font stack | mermaid's own |
 
@@ -101,9 +101,11 @@ not resolve is a warning: a stack is meant to fall through, and the fallback is
 legible. Both arrive as `describe` diagnostics rather than per-diagram errors —
 the project set them, so no one block is at fault.
 
-Naming a theme drops the dark alternative — both passes then return the author's
-theme, so there is nothing to switch between. That is the lever for a book that
-wants no dark diagrams anywhere.
+A diagram is drawn in one palette, in every format and on every screen. There is
+no second palette under `prefers-color-scheme`: that query reports the operating
+system, while the reader's theme is a separate choice. WebKit ignores it for an
+SVG referenced by `<img>` in any case, which is every reader on iOS. A book that
+wants dark diagrams sets `dark`.
 
 ## Running it
 
