@@ -72,6 +72,13 @@
       "groupName": "actions (minor and patch)"
     },
 
+    // Matched by datasource, not manager: the matrix legs come from the custom
+    // manager above, so matchManagers github-actions would label half of them.
+    {
+      "matchDatasources": ["github-runners"],
+      "labels": ["dependencies", "github-actions"]
+    },
+
     {
       "matchDatasources": ["docker"],
       "labels": ["dependencies", "docker"]
