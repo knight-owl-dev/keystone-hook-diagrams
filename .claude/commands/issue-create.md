@@ -19,19 +19,19 @@ Create a new GitHub issue following project templates.
 
 ### 2. Determine Issue Type
 
-Analyze the description to determine whether this is a **bug** or **task/enhancement**:
+The organization defines three issue types. Pick one — step 8 sets it at
+creation, and it is distinct from the labels in step 3.
 
-**Bug indicators**:
+| Type      | When to pick it                                                  |
+|-----------|------------------------------------------------------------------|
+| `Bug`     | Broken, failing, or unexpected behavior — including a regression |
+| `Feature` | New functionality an author or forker would notice and use       |
+| `Task`    | Everything else — internal work, docs, CI, refactors, gates      |
 
-- Words like: broken, not working, error, crash, fail, unexpected, wrong, regression
-- Describes something that was working before
-- Reports incorrect behavior vs expected behavior
-
-**Task/Enhancement indicators**:
-
-- Words like: add, implement, create, improve, update, refactor, enable, support
-- Describes new functionality or improvements
-- Focuses on goals and outcomes
+`Feature` is narrower than it reads, and `Task` is the common case: work on the
+hook's own plumbing is a `Task` even when it carries the `enhancement` label.
+The type answers *what kind of work is this*; the label answers *what does it
+touch*.
 
 ### 3. Suggest Labels
 
@@ -56,7 +56,7 @@ Always suggest at least one primary label (`bug`, `enhancement`, or `documentati
 
 Use AskUserQuestion to confirm the issue type and labels:
 
-- Show the determined issue type (Bug or Task/Enhancement)
+- Show the determined issue type (`Task`, `Bug` or `Feature`)
 - Show the recommended labels
 - Allow the user to adjust before proceeding
 
@@ -93,7 +93,7 @@ nothing more; cut flourish and drama.
 [Any additional context from the description]
 ```
 
-**For Tasks/Enhancements** (template: `.github/ISSUE_TEMPLATE/task.md`):
+**For Features and Tasks** (template: `.github/ISSUE_TEMPLATE/task.md`):
 
 ```markdown
 ## Goal
@@ -143,6 +143,7 @@ Use a separate `--label` flag for each label.
 ```bash
 gh issue create \
   --repo knight-owl-dev/keystone-hook-diagrams \
+  --type "<type>" \
   --label "<label-1>" \
   --label "<label-2>" \
   --title "<title>" \
@@ -154,12 +155,5 @@ gh issue create \
 After successful creation:
 
 - Display the issue URL
-- Note that Issue Types must be set manually (gh CLI doesn't support this yet)
-- Ask if the user wants to open the issue in browser to set the type:
-
-  ```bash
-  gh issue view <issue-number> --repo knight-owl-dev/keystone-hook-diagrams --web
-  ```
-
 - Offer to create a branch for the issue (using GitHub's naming convention:
   `<issue-number>-<issue-title-slug>`)
