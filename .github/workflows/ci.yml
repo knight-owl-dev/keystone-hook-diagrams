@@ -75,8 +75,8 @@ jobs:
           context: .
           # Constrains the build to the arch the matrix names. Redundant on a
           # native runner; without it, an arch paired with the wrong runner
-          # label reports `Image (arm64)` green over an amd64 build — a name
-          # main's ruleset trusts as a required check.
+          # label builds that runner's platform and reports its leg green over
+          # an image the matrix never covered.
           platforms: linux/${{ matrix.arch }}
           load: true
           tags: keystone-hook-diagrams:ci
@@ -95,3 +95,24 @@ jobs:
 
       - name: Test the image
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:ci
+
+  # main's ruleset requires this context by name and is not in version control.
+  # Routing the requirement through a gate is what lets an architecture be
+  # added, removed or renamed without an out-of-band ruleset edit.
+  image-gate:
+    name: Image
+    needs: image
+    # Without always(), a failed leg skips this job — and a skipped required
+    # check counts as passing.
+    if: always()
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Assert every architecture passed
+        env:
+          # A matrix job's result is the aggregate over its legs.
+          RESULT: ${{ needs.image.result }}
+        run: |
+          if [[ "${RESULT}" != "success" ]]; then
+            echo "ERROR: image suite ${RESULT}" >&2
+            exit 1
+          fi
