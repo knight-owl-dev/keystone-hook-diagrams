@@ -107,6 +107,24 @@ system, while the reader's theme is a separate choice. WebKit ignores it for an
 SVG referenced by `<img>` in any case, which is every reader on iOS. A book that
 wants dark diagrams sets `dark`.
 
+### What each setting draws
+
+The same flowchart at every theme, and at the one look that is not `classic`.
+Rendered by this image through the raster path, so these are the pictures a PDF
+gets. `make samples` re-renders them.
+
+| | |
+| --- | --- |
+| `default` | `neutral` |
+| ![default](docs/samples/theme-default.png) | ![neutral](docs/samples/theme-neutral.png) |
+| `base` | `forest` |
+| ![base](docs/samples/theme-base.png) | ![forest](docs/samples/theme-forest.png) |
+| `dark` | `handDrawn`, at the `default` theme |
+| ![dark](docs/samples/theme-dark.png) | ![handDrawn](docs/samples/look-hand-drawn.png) |
+
+`base` is uncolored on purpose: it is the theme to drive with `themeVariables`
+when a book matches its diagrams to its own palette.
+
 ## Running it
 
 The template wires it as a second service on a shared volume, hardened and
