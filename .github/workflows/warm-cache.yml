@@ -1,0 +1,86 @@
+name: Warm Cache
+
+# Builds the image on main and keeps nothing but its layers.
+#
+# publish.yml writes these same refs, but a release is the rarest event in the
+# repo and every pull request reads them. Between releases the cache holds
+# whichever Dockerfile the last release shipped, so a base-digest or lockfile
+# bump goes cold the moment it merges — which is when the expensive layer just
+# moved.
+#
+# The ref names must match the ones ci.yml reads, which
+# scripts/lib/validate-cache-refs.sh holds equal across the three files.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/knight-owl-dev/keystone-hook-diagrams
+
+# Never cancel a build in flight — the opposite of ci.yml. cache-to exports
+# only once a build finishes, so a cancelled run writes nothing, and merges
+# arriving faster than a cold build would leave the cache unwritten.
+#
+# The group covers this workflow alone; publish.yml writes the same refs under
+# its own. They collide on a release, when the merge to main warms while the
+# promoted tag publishes. Harmless: a release ships main's tree, so the two
+# export equivalent layers and the later push wins.
+concurrency:
+  group: warm-cache
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    name: Warm Cache (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+
+    permissions:
+      contents: read
+      packages: write
+
+    # Native runner per architecture, for the reasons ci.yml and publish.yml
+    # give.
+    strategy:
+      # One architecture failing to build must not leave the other cold.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # type=cacheonly builds every stage and exports no image. cache-from
+      # keeps a merge touching no Dockerfile cheap.
+      #
+      # No IMAGE_VERSION: its ARG sits below every expensive layer, so the
+      # version a build stamps decides none of what this caches.
+      - name: Build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=cacheonly
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
+          # mode=max for the reason publish.yml states.
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }},mode=max

@@ -161,6 +161,9 @@ lint-actions:
 	@echo "Validating Trivy version pins..." \
 		&& scripts/lib/validate-trivy-pins.sh \
 		&& echo "OK"
+	@echo "Validating build cache refs..." \
+		&& scripts/lib/validate-cache-refs.sh \
+		&& echo "OK"
 
 # Lint Markdown files
 lint-md:

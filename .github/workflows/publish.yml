@@ -128,9 +128,10 @@ jobs:
           sbom: true
           provenance: true
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
-          # Exported after the scan: buildcache-<arch> is a tag on the same
-          # package as :latest, so a failed scan must leave none of its layers
-          # reachable. Costs no rebuild — the builder outlives the step, so
+          # Exported after the scan, which keeps a failed release from adding
+          # to these refs. It does not keep unscanned layers off the package:
+          # warm-cache.yml writes the same refs from main, and a release ships
+          # main's tree. Costs no rebuild — the builder outlives the step, so
           # this build hits local cache.
           #
           # A registry ref and not type=gha: this workflow runs on tag pushes,
