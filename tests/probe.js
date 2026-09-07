@@ -132,11 +132,17 @@ async function main() {
   // to itself would pass on any string at all.
   const setting = (name) =>
     (process.env[`KEYSTONE_DIAGRAMS_${name}`] || '').trim();
+
+  // Restated rather than imported, for the reason the whole string is rebuilt
+  // here — an independent copy is what holds the hook to its defaults.
+  const theme = setting('THEME') || 'default';
+  const look = setting('LOOK') || 'classic';
+  const font = setting('FONT') || 'Noto Sans, sans-serif';
   const version = (process.env.IMAGE_VERSION || '').trim();
   const expected =
     !version || version === 'local'
       ? null
-      : `${version}/theme=${setting('THEME')}/font=${setting('FONT')}/look=${setting('LOOK')}`;
+      : `${version}/theme=${theme}/font=${font}/look=${look}`;
 
   await check('describe carries the cache identity', async () => {
     if (!expected) {
@@ -264,24 +270,26 @@ async function main() {
     return `width="${NOMINAL_WIDTH}"`;
   });
 
-  await check('the vector carries both palettes', () => {
+  await check('the vector paints one opaque background', () => {
     expect(svg, 'epub did not render');
-    expect(
-      svg.includes('@media (prefers-color-scheme: dark)'),
-      'no dark media query',
-    );
     const painted = [
       ...svg.matchAll(/#ks-diagram\{background-color:([^}]+)\}/g),
     ].map((m) => m[1]);
+    // Exactly one: none loses a light palette's strokes under night mode, and a
+    // second would be a palette switch keyed to the OS.
     expect(
-      painted.length === 2,
-      `${painted.length} backgrounds, expected one per palette`,
+      painted.length === 1,
+      `${painted.length} backgrounds, expected exactly one`,
     );
     expect(
-      !painted.some((color) => /transparent|none/i.test(color)),
-      `a palette paints nothing: ${painted.join(', ')}`,
+      !/transparent|none/i.test(painted[0]),
+      `the background paints nothing: ${painted[0]}`,
     );
-    return painted.join(' / ');
+    expect(
+      !svg.includes('prefers-color-scheme'),
+      'the SVG carries a palette keyed to the operating system',
+    );
+    return painted[0];
   });
 
   await check('the title is alt text, escaped', () => {
