@@ -16,7 +16,7 @@ DOCKER_TTY ?= $(if $(IS_TTY),-t)
 
 .PHONY: sync resolve build scan clean set-version get-version release \
 	lint lint-fix lint-docker lint-sh lint-sh-fmt lint-sh-fmt-fix lint-js lint-js-fix \
-	lint-actions lint-md lint-md-fix lint-spell test test-bats test-image help
+	lint-actions lint-md lint-md-fix lint-spell test test-bats test-image samples help
 
 # Resolve latest versions, build, and test the image
 sync: resolve build test-image
@@ -47,6 +47,11 @@ release:
 # local build reports no cache identity — publish.yml passes the release tag.
 build:
 	@docker compose build
+
+# Render the theme and look samples the README embeds. Regenerate when mermaid
+# or Chromium moves what a theme draws; nothing gates it.
+samples:
+	@IMAGE_TAG="$(IMAGE_TAG)" ./scripts/generate-samples.sh
 
 # Integration-test the built image. Runs host-side, because the container has
 # no shell and its ENTRYPOINT owns argv — tests/test-image.sh says why.
@@ -232,5 +237,6 @@ help:
 	@echo "  make test              Run all tests (bats + image)"
 	@echo "  make test-bats         Run BATS tests inside the ci-tools image"
 	@echo "  make test-image        Integration-test the built image"
+	@echo "  make samples           Re-render the theme samples in docs/samples"
 	@echo "  make help              Show this message"
 	@echo ""

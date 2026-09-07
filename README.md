@@ -107,6 +107,20 @@ system, while the reader's theme is a separate choice. WebKit ignores it for an
 SVG referenced by `<img>` in any case, which is every reader on iOS. A book that
 wants dark diagrams sets `dark`.
 
+### What each setting draws
+
+The same flowchart at every theme, and at `handDrawn`. Rendered by this image
+through the raster path, so these are the pictures a PDF gets.
+
+| | |
+| --- | --- |
+| `default` | `neutral` |
+| ![default](docs/samples/theme-default.png) | ![neutral](docs/samples/theme-neutral.png) |
+| `base` | `forest` |
+| ![base](docs/samples/theme-base.png) | ![forest](docs/samples/theme-forest.png) |
+| `dark` | `handDrawn`, at the `default` theme |
+| ![dark](docs/samples/theme-dark.png) | ![handDrawn](docs/samples/look-hand-drawn.png) |
+
 ## Running it
 
 The template wires it as a second service on a shared volume, hardened and
@@ -145,6 +159,7 @@ publishes.
 ```bash
 make build        # build keystone-hook-diagrams:local
 make test-image   # start it three ways and render against each
+make samples      # re-render docs/samples, which the README embeds
 make test         # the above, plus the bats suites
 make scan         # Trivy, at the policy publish enforces
 make lint         # hadolint, shellcheck, shfmt, biome, actionlint, markdownlint, cspell
@@ -178,6 +193,8 @@ Each of these was a bug before it was a rule.
 - **The listener sets `allowHalfOpen`.** Keystone writes its request and
   half-closes. Without it Node tears down the whole socket when the readable side
   ends, and the reply is written to a socket that is already gone.
+- **`handDrawn` sketches from a fixed seed.** Mermaid seeds it randomly, so a
+  book redrew every shape afresh on each cache miss and no two builds agreed.
 - **Chromium runs with `--no-sandbox`.** Its sandbox needs capabilities the
   template deliberately drops. The container is the sandbox.
 - **One browser lives for the life of the container.** Every block waits on this
