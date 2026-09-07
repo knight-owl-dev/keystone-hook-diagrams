@@ -209,9 +209,8 @@ jobs:
           for path in /tmp/digests/*; do
             refs+=("${IMAGE}@sha256:${path##*/}")
           done
-          # One digest per architecture in the build matrix. A merge over a
-          # short set tags an index missing an architecture; over none it tags
-          # nothing and exits 0, leaving the release tag on the previous image.
+          # One digest per architecture in the build matrix. A short set merges
+          # an index missing an architecture and moves the release tag onto it.
           # Raise this number when an architecture is added — forgetting fails
           # the release.
           if [[ ${#refs[@]} -ne 2 ]]; then
