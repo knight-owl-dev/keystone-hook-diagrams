@@ -93,7 +93,7 @@ Keystone forwards them without knowing what they are.
 | --- | --- | --- |
 | `KEYSTONE_DIAGRAMS_THEME` | `default`, `base`, `dark`, `forest`, `neutral` | `default` |
 | `KEYSTONE_DIAGRAMS_LOOK` | `classic`, `handDrawn` | `classic` |
-| `KEYSTONE_DIAGRAMS_FONT` | a CSS font stack | mermaid's own |
+| `KEYSTONE_DIAGRAMS_FONT` | a CSS font stack | `Noto Sans, sans-serif` |
 
 A theme or look mermaid does not know is refused rather than ignored, because
 mermaid would silently draw its default and restyle the book. A font that does

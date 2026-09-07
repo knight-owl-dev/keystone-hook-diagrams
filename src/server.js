@@ -77,13 +77,14 @@ const NOMINAL_WIDTH = 1600;
 const PROJECT_THEME =
   (process.env.KEYSTONE_DIAGRAMS_THEME || '').trim() || 'default';
 
-// The rest of the book's house style, applied the same way and equally the
-// renderer's own business.
+// The rest of the book's house style, resolved like the theme above.
 //
-// The look resolves like the theme above. The font has no one default to
-// resolve to, and goes unchecked besides: it is a CSS stack, so a name Chromium
-// cannot find falls through to a generic family, which is what a stack is for.
-const PROJECT_FONT = (process.env.KEYSTONE_DIAGRAMS_FONT || '').trim();
+// The font default names a face this image carries. Mermaid's own asks for
+// Trebuchet, Verdana and Arial — none of them installed — so it reached the
+// page as whatever fontconfig aliases `sans-serif` to, and it reached an EPUB
+// as whatever the reading device has. Naming the face pins both.
+const PROJECT_FONT =
+  (process.env.KEYSTONE_DIAGRAMS_FONT || '').trim() || 'Noto Sans, sans-serif';
 const PROJECT_LOOK =
   (process.env.KEYSTONE_DIAGRAMS_LOOK || '').trim() || 'classic';
 
@@ -99,9 +100,11 @@ const LOOKS = new Set(['classic', 'handDrawn']);
 // the requested size reached the page as 1.9x, and by a factor that differed per
 // diagram. What decides the size on the page is the width the wrapper gives it.
 function houseStyle() {
-  const style = { theme: PROJECT_THEME, look: PROJECT_LOOK };
-  if (PROJECT_FONT) style.themeVariables = { fontFamily: PROJECT_FONT };
-  return style;
+  return {
+    theme: PROJECT_THEME,
+    look: PROJECT_LOOK,
+    themeVariables: { fontFamily: PROJECT_FONT },
+  };
 }
 
 // What Keystone hashes into its cache key, and never reads — so the shape is
@@ -117,7 +120,8 @@ function houseStyle() {
 // server.js. Sending none costs the cache and keeps the renders correct.
 function identity() {
   if (!IMAGE_VERSION || IMAGE_VERSION === 'local') return null;
-  // An unset font is spelled empty, so unset stays distinct from set.
+  // Every setting resolves, so this names what was drawn rather than what the
+  // project happened to spell out.
   return `${IMAGE_VERSION}/theme=${PROJECT_THEME}/font=${PROJECT_FONT}/look=${PROJECT_LOOK}`;
 }
 

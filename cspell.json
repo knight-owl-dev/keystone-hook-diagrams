@@ -41,6 +41,7 @@
     "startswith",
     "subshell",
     "tmpfs",
-    "trivyignores"
+    "trivyignores",
+    "Verdana"
   ]
 }
