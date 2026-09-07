@@ -64,11 +64,12 @@ unverified binary source, or an unpinned dependency.
   `warm-cache.yml` builds the image and runs no test. The ruleset's bypass
   actors (org admin, repo role 5) are `always`, so an admin merging past red or
   pushing straight to `main` lands untested code.
-- **`main`'s ruleset names the CI jobs as required checks**, by string —
-  including `Image (amd64)` and `Image (arm64)`, which `ci.yml` produces from a
-  matrix. Renaming the job or changing an `arch` value leaves the required check
-  waiting for a report that never comes, and every PR hangs rather than fails.
-  Update the ruleset in the same change.
+- **`main`'s ruleset names the CI jobs as required checks**, by string: `Lint`,
+  `BATS` and `Image`. `Image` is a gate job asserting the arch matrix's
+  aggregate, so a leg can be added, removed or renamed without touching the
+  ruleset. Renaming one of those three still leaves a required check waiting
+  for a report that never comes, and every PR hangs rather than fails — update
+  the ruleset in the same change.
 
 ## Releasing
 
