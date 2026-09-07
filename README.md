@@ -101,6 +101,10 @@ not resolve is a warning: a stack is meant to fall through, and the fallback is
 legible. Both arrive as `describe` diagnostics rather than per-diagram errors —
 the project set them, so no one block is at fault.
 
+`handDrawn` sketches each shape from a seed, which this image fixes. Mermaid
+seeds it randomly, and a book that redrew every shape differently on each cache
+miss would not be reproducible.
+
 A diagram is drawn in one palette, in every format and on every screen. There is
 no second palette under `prefers-color-scheme`: that query reports the operating
 system, while the reader's theme is a separate choice. WebKit ignores it for an
