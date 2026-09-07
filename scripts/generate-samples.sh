@@ -3,10 +3,10 @@ set -euo pipefail
 
 # generate-samples.sh — Render the theme and look samples the README embeds
 #
-# One container per sample, because a setting is read once at startup and
-# cannot change while the hook is listening — the same reason test-image.sh
-# starts three. Driving it through the environment rather than a per-block
-# `init` directive is what makes a sample show what the setting produces.
+# One container per sample: a setting is read once at startup, the same reason
+# test-image.sh starts three. Driving it through the environment rather than a
+# per-block `init` directive is what makes a sample show what the setting
+# produces.
 #
 # Renders through the raster path, so a sample is the picture a PDF gets.
 #
@@ -22,7 +22,7 @@ OUT_DIR="${REPO_ROOT}/docs/samples"
 
 SOCKET="/hooks/samples.sock"
 
-# Exercises what a palette actually colors: node fill, node border, the decision
+# Exercises what a palette colors: node fill, node border, the decision
 # shape, edge strokes and edge labels. A flowchart small enough to stay legible
 # at the width a README table cell gives it.
 readonly DIAGRAM='flowchart LR

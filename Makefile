@@ -49,7 +49,7 @@ build:
 	@docker compose build
 
 # Render the theme and look samples the README embeds. Regenerate when mermaid
-# or Chromium moves what a theme draws; nothing gates this, so it is by hand.
+# or Chromium moves what a theme draws; nothing gates it.
 samples:
 	@IMAGE_TAG="$(IMAGE_TAG)" ./scripts/generate-samples.sh
 

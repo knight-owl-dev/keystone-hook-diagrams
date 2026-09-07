@@ -101,10 +101,6 @@ not resolve is a warning: a stack is meant to fall through, and the fallback is
 legible. Both arrive as `describe` diagnostics rather than per-diagram errors —
 the project set them, so no one block is at fault.
 
-`handDrawn` sketches each shape from a seed, which this image fixes. Mermaid
-seeds it randomly, and a book that redrew every shape differently on each cache
-miss would not be reproducible.
-
 A diagram is drawn in one palette, in every format and on every screen. There is
 no second palette under `prefers-color-scheme`: that query reports the operating
 system, while the reader's theme is a separate choice. WebKit ignores it for an
@@ -113,9 +109,8 @@ wants dark diagrams sets `dark`.
 
 ### What each setting draws
 
-The same flowchart at every theme, and at the one look that is not `classic`.
-Rendered by this image through the raster path, so these are the pictures a PDF
-gets. `make samples` re-renders them.
+The same flowchart at every theme, and at `handDrawn`. Rendered by this image
+through the raster path, so these are the pictures a PDF gets.
 
 | | |
 | --- | --- |
@@ -125,9 +120,6 @@ gets. `make samples` re-renders them.
 | ![base](docs/samples/theme-base.png) | ![forest](docs/samples/theme-forest.png) |
 | `dark` | `handDrawn`, at the `default` theme |
 | ![dark](docs/samples/theme-dark.png) | ![handDrawn](docs/samples/look-hand-drawn.png) |
-
-`base` is uncolored on purpose: it is the theme to drive with `themeVariables`
-when a book matches its diagrams to its own palette.
 
 ## Running it
 
@@ -167,6 +159,7 @@ publishes.
 ```bash
 make build        # build keystone-hook-diagrams:local
 make test-image   # start it three ways and render against each
+make samples      # re-render docs/samples, which the README embeds
 make test         # the above, plus the bats suites
 make scan         # Trivy, at the policy publish enforces
 make lint         # hadolint, shellcheck, shfmt, biome, actionlint, markdownlint, cspell
@@ -200,6 +193,8 @@ Each of these was a bug before it was a rule.
 - **The listener sets `allowHalfOpen`.** Keystone writes its request and
   half-closes. Without it Node tears down the whole socket when the readable side
   ends, and the reply is written to a socket that is already gone.
+- **`handDrawn` sketches from a fixed seed.** Mermaid seeds it randomly, so a
+  book redrew every shape afresh on each cache miss and no two builds agreed.
 - **Chromium runs with `--no-sandbox`.** Its sandbox needs capabilities the
   template deliberately drops. The container is the sandbox.
 - **One browser lives for the life of the container.** Every block waits on this
