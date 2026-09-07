@@ -62,8 +62,8 @@ const RASTER_SCALE = 3;
 // does the job — see withIntrinsicSize.
 const NOMINAL_WIDTH = 1600;
 
-// Mermaid seeds `handDrawn` randomly, so an unseeded book redraws every shape
-// afresh on each cache miss. Which value is arbitrary; fixing one is the point.
+// Mermaid seeds `handDrawn` randomly, so an unseeded book draws every shape
+// differently on each cache miss. Any fixed number does; this one is arbitrary.
 const HAND_DRAWN_SEED = 57;
 
 // The palette this book is drawn with, from the template's project.conf by way

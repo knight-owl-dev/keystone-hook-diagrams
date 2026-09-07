@@ -30,11 +30,18 @@ readonly DIAGRAM='flowchart LR
     B -->|approved| C[Published]
     B -->|changes| A'
 
+# Renders land here first: writing straight to the tracked PNG would truncate it
+# before the render ran, so a refusal would leave a 0-byte file the README embeds
+# and a working tree that reads as regenerated rather than failed.
+TMP_DIR="$(mktemp -d)"
+
 CONTAINERS=()
 VOLUMES=()
 
 cleanup() {
   local name
+
+  rm -rf "${TMP_DIR}"
   for name in ${CONTAINERS[@]+"${CONTAINERS[@]}"}; do
     docker rm -f "${name}" > /dev/null 2>&1 || true
   done
@@ -64,6 +71,10 @@ wait_for_socket() {
 # Renders one sample. The PNG comes back over stdout rather than a file: the
 # root is read-only, /tmp is a tmpfs and `docker cp` cannot read one, and a
 # bind-mounted output directory would not be writable by the container's UID.
+#
+# The reply is accumulated as buffers, the way tests/probe.js does it: a chunk
+# boundary can fall inside a multi-byte sequence, which decoding per chunk would
+# corrupt.
 sample() {
   local slug="${1}"
   shift
@@ -94,19 +105,25 @@ sample() {
       content: process.env.DIAGRAM,
     });
     const socket = net.connect(process.env.HOOK_SOCKET, () => socket.end(request));
-    let body = "";
-    socket.on("data", (chunk) => (body += chunk));
+    const chunks = [];
+    socket.on("data", (chunk) => chunks.push(chunk));
+    socket.on("error", (cause) => {
+      process.stderr.write(`could not ask the hook: ${cause.message}\n`);
+      process.exit(1);
+    });
     socket.on("end", () => {
-      const reply = JSON.parse(body);
+      const reply = JSON.parse(Buffer.concat(chunks).toString("utf8"));
       if (reply.error) {
         process.stderr.write(reply.error + "\n");
         process.exit(1);
       }
       process.stdout.write(Buffer.from(reply.assets[0].data, "base64"));
-    });' > "${OUT_DIR}/${slug}.png"
+    });' > "${TMP_DIR}/${slug}.png"
 
   docker rm -f "${name}" > /dev/null
   docker volume rm "${name}-hooks" > /dev/null 2>&1 || true
+
+  mv "${TMP_DIR}/${slug}.png" "${OUT_DIR}/${slug}.png"
 
   local size
   size="$(wc -c < "${OUT_DIR}/${slug}.png" | tr -d ' ')"
