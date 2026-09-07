@@ -1,9 +1,21 @@
 name: CI
 
+# No push trigger: main's ruleset requires a branch to be up to date before
+# merging, so a run here tests the tree its squash will land. warm-cache.yml is
+# what main runs.
+
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
+
+# A superseded run tests a tree nothing will merge. Cancelling costs nothing
+# here: these jobs export no cache, so a cancelled one leaves nothing behind.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/knight-owl-dev/keystone-hook-diagrams
 
 permissions:
   contents: read
@@ -73,9 +85,13 @@ jobs:
           # leaving publish as their first gate — where a failure is a failed
           # release.
           build-args: IMAGE_VERSION=v0.0.0-ci
-          # publish.yml writes this ref with mode=max, so a PR restores the
-          # deps stage and the chromium layer. :latest holds no cache manifest.
-          cache-from: type=registry,ref=ghcr.io/knight-owl-dev/keystone-hook-diagrams:buildcache-${{ matrix.arch }}
+          # warm-cache.yml writes this ref from main with mode=max, so a PR
+          # restores the deps stage and the chromium layer. :latest holds no
+          # cache manifest.
+          #
+          # No export here: a fork's pull request gets no packages: write, so
+          # it would fail on the runs that most need the cache.
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
 
       - name: Test the image
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:ci
