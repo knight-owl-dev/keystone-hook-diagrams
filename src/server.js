@@ -68,8 +68,12 @@ const NOMINAL_WIDTH = 1600;
 // protocol has a name for this one.
 //
 // Unset resolves here rather than at each use, so nothing downstream can tell
-// it from `default`. identity() included: two spellings would cache one render
-// under two keys.
+// it from `default`; identity() included, where two spellings would cache one
+// render under two keys.
+//
+// It also keeps the default ours. Left for mermaid to fill in, the value is
+// whatever that release picks, and a book restyles on an image bump with
+// nothing naming the change.
 const PROJECT_THEME =
   (process.env.KEYSTONE_DIAGRAMS_THEME || '').trim() || 'default';
 
