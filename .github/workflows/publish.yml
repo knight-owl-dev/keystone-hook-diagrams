@@ -202,16 +202,15 @@ jobs:
           # script runs, so a merge-only re-run after the digests expire fails
           # there rather than reaching the guard below.
           #
-          # nullglob, or a missing or empty directory leaves the literal '*'
-          # as the loop variable and refs holds a ref to nothing.
+          # nullglob keeps a missing or empty directory at zero refs, rather
+          # than one ref to the literal '*'.
           shopt -s nullglob
           refs=()
           for path in /tmp/digests/*; do
             refs+=("${IMAGE}@sha256:${path##*/}")
           done
-          # One digest per architecture in the build matrix. A merge over a
-          # short set tags an index missing an architecture; over none it tags
-          # nothing and exits 0, leaving the release tag on the previous image.
+          # One digest per architecture in the build matrix. A short set merges
+          # an index missing an architecture and moves the release tag onto it.
           # Raise this number when an architecture is added — forgetting fails
           # the release.
           if [[ ${#refs[@]} -ne 2 ]]; then
