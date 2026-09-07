@@ -33,7 +33,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
 
@@ -164,7 +164,7 @@ jobs:
   merge:
     name: Merge and sign
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     permissions:
       contents: read
@@ -250,7 +250,7 @@ jobs:
   release:
     name: Create Release
     needs: merge
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write
     steps:

@@ -44,6 +44,18 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+[\\w-]+: '(?<currentValue>[^']+)'"
       ]
+    },
+    {
+      // A matrix leg names its runner under a key of its own, and the
+      // github-runners manager reads `runs-on:` alone. Unmatched, a new Ubuntu
+      // moves every runs-on: job and strands both matrices. The capture groups
+      // mirror what that manager extracts: depName "ubuntu", currentValue
+      // "24.04" or "24.04-arm".
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["runner: (?<depName>ubuntu)-(?<currentValue>\\S+)"],
+      "datasourceTemplate": "github-runners",
+      "autoReplaceStringTemplate": "runner: {{depName}}-{{newValue}}"
     }
   ],
 
@@ -58,6 +70,13 @@
       "matchDepTypes": ["action"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "actions (minor and patch)"
+    },
+
+    // Matched by datasource, not manager: the matrix legs come from the custom
+    // manager above, so matchManagers github-actions would label half of them.
+    {
+      "matchDatasources": ["github-runners"],
+      "labels": ["dependencies", "github-actions"]
     },
 
     {

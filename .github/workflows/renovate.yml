@@ -23,7 +23,7 @@ concurrency:
 jobs:
   renovate:
     name: Update Dependencies
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     # No checkout: Renovate clones the repository itself and reads
     # .github/renovate.jsonc from that clone. Upstream examples check out only
