@@ -134,13 +134,14 @@ async function main() {
     (process.env[`KEYSTONE_DIAGRAMS_${name}`] || '').trim();
 
   // Restated rather than imported, for the reason the whole string is rebuilt
-  // here — an independent copy is what holds the hook to the rule.
+  // here — an independent copy is what holds the hook to its defaults.
   const theme = setting('THEME') || 'default';
+  const look = setting('LOOK') || 'classic';
   const version = (process.env.IMAGE_VERSION || '').trim();
   const expected =
     !version || version === 'local'
       ? null
-      : `${version}/theme=${theme}/font=${setting('FONT')}/look=${setting('LOOK')}`;
+      : `${version}/theme=${theme}/font=${setting('FONT')}/look=${look}`;
 
   await check('describe carries the cache identity', async () => {
     if (!expected) {

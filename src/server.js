@@ -76,11 +76,12 @@ const PROJECT_THEME =
 // The rest of the book's house style, applied the same way and equally the
 // renderer's own business.
 //
-// The font is a CSS stack naming what this image carries, so it is not checked
-// here: a name Chromium cannot resolve falls through the stack to a generic
-// family, which is the behavior a stack is for.
+// The look resolves like the theme above. The font has no one default to
+// resolve to, and goes unchecked besides: it is a CSS stack, so a name Chromium
+// cannot find falls through to a generic family, which is what a stack is for.
 const PROJECT_FONT = (process.env.KEYSTONE_DIAGRAMS_FONT || '').trim();
-const PROJECT_LOOK = (process.env.KEYSTONE_DIAGRAMS_LOOK || '').trim();
+const PROJECT_LOOK =
+  (process.env.KEYSTONE_DIAGRAMS_LOOK || '').trim() || 'classic';
 
 // Mermaid ignores a theme or a look it does not know and draws its default
 // instead, so a typo in either would restyle a whole book in silence.
@@ -94,8 +95,7 @@ const LOOKS = new Set(['classic', 'handDrawn']);
 // the requested size reached the page as 1.9x, and by a factor that differed per
 // diagram. What decides the size on the page is the width the wrapper gives it.
 function houseStyle() {
-  const style = { theme: PROJECT_THEME };
-  if (PROJECT_LOOK) style.look = PROJECT_LOOK;
+  const style = { theme: PROJECT_THEME, look: PROJECT_LOOK };
   if (PROJECT_FONT) style.themeVariables = { fontFamily: PROJECT_FONT };
   return style;
 }
@@ -113,7 +113,7 @@ function houseStyle() {
 // server.js. Sending none costs the cache and keeps the renders correct.
 function identity() {
   if (!IMAGE_VERSION || IMAGE_VERSION === 'local') return null;
-  // An unset font or look is spelled empty, so unset stays distinct from set.
+  // An unset font is spelled empty, so unset stays distinct from set.
   return `${IMAGE_VERSION}/theme=${PROJECT_THEME}/font=${PROJECT_FONT}/look=${PROJECT_LOOK}`;
 }
 
@@ -142,7 +142,7 @@ function houseStyleDiagnostics() {
       message: wrong('KEYSTONE_DIAGRAMS_THEME', PROJECT_THEME, 'theme', THEMES),
     });
   }
-  if (PROJECT_LOOK && !LOOKS.has(PROJECT_LOOK)) {
+  if (!LOOKS.has(PROJECT_LOOK)) {
     diagnostics.push({
       severity: 'error',
       message: wrong('KEYSTONE_DIAGRAMS_LOOK', PROJECT_LOOK, 'look', LOOKS),
