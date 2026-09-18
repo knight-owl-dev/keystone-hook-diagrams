@@ -57,11 +57,16 @@ flowchart LR
   A --> B
 `;
 
-// An arrow mermaid's grammar has no rule for, which it reports by line — the
-// one refusal that translates a position and quotes the renderer as well.
-const UNPARSABLE = `flowchart LR
+// An arrow mermaid's grammar has no rule for, under frontmatter: mermaid counts
+// from the diagram left after the frontmatter is stripped, so the fault on line
+// 5 is line 2 to the renderer. Both halves of the translation ride on one case.
+const UNPARSABLE = `---
+title: Broken
+---
+flowchart LR
   A -->< B
 `;
+const UNPARSABLE_FAULT = "line 5: mermaid could not parse 'A -->< B'";
 
 // ── Reporting ────────────────────────────────────────────────────────
 
@@ -343,12 +348,16 @@ async function main() {
   // The translation and the renderer's own text, both. Before callouts there
   // was one string, so naming the author's line meant discarding everything
   // mermaid said.
-  await check("a parse error keeps mermaid's own text", async () => {
+  //
+  // The line is asserted exactly. A mermaid release that moves where it counts
+  // from would otherwise point every author at a line near their fault, which
+  // reads as correct until they look.
+  await check('a parse error names the line, and quotes mermaid', async () => {
     const reply = await transform('epub', UNPARSABLE);
     expect(reply.error, 'the block rendered instead of being refused');
     expect(
-      /^line \d+:/.test(reply.error.problem),
-      `problem did not translate a position: ${reply.error.problem}`,
+      reply.error.problem === UNPARSABLE_FAULT,
+      `problem was '${reply.error.problem}', expected '${UNPARSABLE_FAULT}'`,
     );
     expect(
       typeof reply.error.verbatim === 'string' && reply.error.verbatim,

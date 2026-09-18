@@ -339,11 +339,10 @@ function checkDirectives(content) {
 // to someone looking at a fence.
 //
 // What is worth keeping is the position, and the author's own line is a better
-// way to show it than any of mermaid's rendering. Two corrections get there:
-// mermaid counts from the diagram left after its frontmatter is stripped, and
-// it reports one line further down than the fault. Both were measured rather
-// than documented, so a number that lands outside the block is dropped along
-// with the quote instead of being reported wrong.
+// way to show it than any of mermaid's rendering. One correction gets there:
+// mermaid counts from the diagram left after its frontmatter is stripped.
+// Measured rather than documented, so a number that lands outside the block is
+// dropped along with the quote instead of being reported wrong.
 //
 // None of that loses mermaid's own text any more: `verbatim` carries it as it
 // arrived, beside the translation rather than instead of it.
@@ -363,7 +362,7 @@ function refusalFrom(message, content) {
   if (parse) {
     const lines = content.split('\n');
     const offset = frontmatterLines(content);
-    const index = offset + Number(parse[1]) - 2;
+    const index = offset + Number(parse[1]) - 1;
 
     if (index >= 0 && index < lines.length) {
       const source = lines[index].trim();
