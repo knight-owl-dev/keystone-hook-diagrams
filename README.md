@@ -84,6 +84,22 @@ unpainted diagram loses its strokes on a night-mode page.
 The diagram's `title:` frontmatter comes back as alt text; the title is blanked
 before rendering so it is not drawn twice.
 
+A diagnostic — `describe`'s complaint about the settings, or the refusal that
+replaces a block this hook will not render — is an object keyed by callout
+name, which Keystone lays out:
+
+```json
+{
+  "problem": "unknown directive 'shade' on line 1",
+  "choices": ["init", "initialize"],
+  "because": "Mermaid ignores anything else without saying so."
+}
+```
+
+`describe`'s carry `severity` beside the callouts; a refusal does not, because
+refusing a block is always fatal. The vocabulary is
+[Keystone's](https://keystone.knight-owl.dev/hooks/writing-a-hook/#writing-the-message).
+
 ## Configuration
 
 Settings for the whole book, passed by the template from its `project.conf`.

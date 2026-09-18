@@ -57,6 +57,12 @@ flowchart LR
   A --> B
 `;
 
+// An arrow mermaid's grammar has no rule for, which it reports by line — the
+// one refusal that translates a position and quotes the renderer as well.
+const UNPARSABLE = `flowchart LR
+  A -->< B
+`;
+
 // ── Reporting ────────────────────────────────────────────────────────
 
 let failed = 0;
@@ -184,15 +190,23 @@ async function main() {
         diagnostics.length === 1,
         `${diagnostics.length} diagnostics, expected 1`,
       );
+      const [warning] = diagnostics;
+      expect(warning.severity === 'warning', `severity ${warning.severity}`);
       expect(
-        diagnostics[0].severity === 'warning',
-        `severity ${diagnostics[0].severity}`,
+        /KEYSTONE_DIAGRAMS_FONT/.test(warning.problem),
+        `problem did not name the setting: ${warning.problem}`,
       );
       expect(
-        /KEYSTONE_DIAGRAMS_FONT/.test(diagnostics[0].message),
-        `message did not name the setting: ${diagnostics[0].message}`,
+        Array.isArray(warning.offenders) && warning.offenders.length > 0,
+        `offenders ${JSON.stringify(warning.offenders)}`,
       );
-      return diagnostics[0].message.split('\n')[0];
+      // The old hand-formatted shape. Keystone rejects a diagnostic it cannot
+      // read, so a site left behind would refuse rather than render.
+      expect(
+        warning.message === undefined,
+        `still carries a formatted message: ${warning.message}`,
+      );
+      return warning.problem;
     });
     return;
   }
@@ -219,7 +233,7 @@ async function main() {
   for (const format of [...RASTER_FORMATS, ...VECTOR_FORMATS]) {
     await check(`transform ${format}`, async () => {
       const reply = await transform(format, DIAGRAM);
-      expect(!reply.error, reply.error);
+      expect(!reply.error, JSON.stringify(reply.error));
       expect(
         reply.assets && reply.assets.length === 1,
         'expected exactly one asset',
@@ -314,8 +328,33 @@ async function main() {
     const reply = await transform('epub', UNKNOWN_DIRECTIVE);
     expect(reply.error, 'the block rendered instead of being refused');
     expect(!reply.body && !reply.assets, 'a refusal carried a body');
-    expect(/unknown directive/.test(reply.error), `error was: ${reply.error}`);
-    return reply.error.split('\n')[0];
+    expect(
+      /unknown directive/.test(reply.error.problem),
+      `error was: ${JSON.stringify(reply.error)}`,
+    );
+    // See the same assertion under font-warning.
+    expect(
+      reply.error.message === undefined,
+      `still carries a formatted message: ${reply.error.message}`,
+    );
+    return reply.error.problem;
+  });
+
+  // The translation and the renderer's own text, both. Before callouts there
+  // was one string, so naming the author's line meant discarding everything
+  // mermaid said.
+  await check("a parse error keeps mermaid's own text", async () => {
+    const reply = await transform('epub', UNPARSABLE);
+    expect(reply.error, 'the block rendered instead of being refused');
+    expect(
+      /^line \d+:/.test(reply.error.problem),
+      `problem did not translate a position: ${reply.error.problem}`,
+    );
+    expect(
+      typeof reply.error.verbatim === 'string' && reply.error.verbatim,
+      `verbatim ${JSON.stringify(reply.error.verbatim)}`,
+    );
+    return reply.error.problem;
   });
 
   // Two at once against one shared browser. Without serialization the second render
@@ -330,7 +369,7 @@ async function main() {
     ]);
     expect(
       !mine.error && !theirs.error,
-      `${mine.error || ''} ${theirs.error || ''}`.trim(),
+      JSON.stringify([mine.error, theirs.error]),
     );
     expect(
       mine.assets[0].data === replies.pdf.assets[0].data,
@@ -346,7 +385,7 @@ async function main() {
   await check('an unknown op is refused', async () => {
     const reply = await ask({ op: 'nonsense' });
     expect(reply.error, 'no error for an operation protocol 1 does not have');
-    return reply.error;
+    return reply.error.problem;
   });
 
   // Reported, not asserted: `npm ci` already guarantees node_modules matches

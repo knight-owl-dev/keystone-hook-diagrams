@@ -144,21 +144,22 @@ function identity() {
 function houseStyleDiagnostics() {
   const diagnostics = [];
 
-  const wrong = (setting, value, kind, allowed) =>
-    `this book sets ${setting} to '${value}', which is not a mermaid ${kind}\n` +
-    `  Set ${setting} in project.conf to one of ${[...allowed].sort().join(', ')}, ` +
-    'or leave it empty.';
+  const wrong = (setting, value, kind, allowed) => ({
+    problem: `this book sets ${setting} to '${value}', which is not a mermaid ${kind}`,
+    choices: [...allowed].sort(),
+    remedy: `Set ${setting} in project.conf, or leave it empty.`,
+  });
 
   if (!THEMES.has(PROJECT_THEME)) {
     diagnostics.push({
       severity: 'error',
-      message: wrong('KEYSTONE_DIAGRAMS_THEME', PROJECT_THEME, 'theme', THEMES),
+      ...wrong('KEYSTONE_DIAGRAMS_THEME', PROJECT_THEME, 'theme', THEMES),
     });
   }
   if (!LOOKS.has(PROJECT_LOOK)) {
     diagnostics.push({
       severity: 'error',
-      message: wrong('KEYSTONE_DIAGRAMS_LOOK', PROJECT_LOOK, 'look', LOOKS),
+      ...wrong('KEYSTONE_DIAGRAMS_LOOK', PROJECT_LOOK, 'look', LOOKS),
     });
   }
 
@@ -166,11 +167,10 @@ function houseStyleDiagnostics() {
   if (missing.length) {
     diagnostics.push({
       severity: 'warning',
-      message:
-        `this renderer has no ${missing.map((f) => `'${f}'`).join(' or ')}, ` +
-        `named in KEYSTONE_DIAGRAMS_FONT\n` +
-        `  Diagrams will letter in whatever else that stack resolves to. ` +
-        `Installed: ${installedFamilies().join(', ')}.`,
+      problem: 'KEYSTONE_DIAGRAMS_FONT names fonts this renderer does not have',
+      offenders: missing,
+      effect: 'Diagrams will letter in whatever else that stack resolves to.',
+      choices: installedFamilies(),
     });
   }
 
@@ -257,7 +257,15 @@ const ELEMENT_ID = 'ks-diagram';
 // ── Reading the block ────────────────────────────────────────────────
 
 // A refusal the author should see, as opposed to a fault in this hook.
-class Refused extends Error {}
+//
+// It carries the diagnostic object the reply sends. `message` is set from
+// `problem` so an unexpected stack still reads.
+class Refused extends Error {
+  constructor(diagnostic) {
+    super(diagnostic.problem);
+    this.diagnostic = diagnostic;
+  }
+}
 
 // Mermaid's own frontmatter, which is where a diagram states its title. The
 // title becomes the image's alt text: a caption is the format's to name, and
@@ -316,11 +324,11 @@ function checkDirectives(content) {
     const name = found[1] || found[2] || found[3];
     if (DIRECTIVES.has(name)) continue;
 
-    const known = [...DIRECTIVES].map((each) => `'${each}'`).join(' and ');
-    throw new Refused(
-      `unknown directive '${name}' on line ${index + 1}\n` +
-        `  Only ${known} configure a diagram. Mermaid ignores anything else without saying so.`,
-    );
+    throw new Refused({
+      problem: `unknown directive '${name}' on line ${index + 1}`,
+      choices: [...DIRECTIVES],
+      because: 'Mermaid ignores anything else without saying so.',
+    });
   }
 }
 
@@ -336,14 +344,19 @@ function checkDirectives(content) {
 // it reports one line further down than the fault. Both were measured rather
 // than documented, so a number that lands outside the block is dropped along
 // with the quote instead of being reported wrong.
+//
+// None of that loses mermaid's own text any more: `verbatim` carries it as it
+// arrived, beside the translation rather than instead of it.
 function refusalFrom(message, content) {
-  const flat = String(message).replace(/\s+/g, ' ').trim();
+  const verbatim = String(message);
+  const flat = verbatim.replace(/\s+/g, ' ').trim();
 
   if (/No diagram type detected/i.test(flat)) {
-    return (
-      'no diagram type on the first line\n' +
-      "  A mermaid block opens with its type — 'flowchart LR', 'sequenceDiagram', 'gantt'."
-    );
+    return {
+      problem: 'no diagram type on the first line',
+      because:
+        "A mermaid block opens with its type — 'flowchart LR', 'sequenceDiagram', 'gantt'.",
+    };
   }
 
   const parse = /Parse error on line (\d+)/.exec(flat);
@@ -355,15 +368,17 @@ function refusalFrom(message, content) {
     if (index >= 0 && index < lines.length) {
       const source = lines[index].trim();
       const at = `line ${index + 1}`;
-      return source
-        ? `${at}: mermaid could not parse '${source}'`
-        : `${at}: mermaid could not parse this line`;
+      return {
+        problem: source
+          ? `${at}: mermaid could not parse '${source}'`
+          : `${at}: mermaid could not parse this line`,
+        verbatim,
+      };
     }
-    return 'mermaid could not parse this diagram';
+    return { problem: 'mermaid could not parse this diagram', verbatim };
   }
 
-  const bare = flat.replace(/^Error:\s*/i, '').replace(/[.\s]+$/, '');
-  return bare || 'mermaid could not parse this diagram';
+  return { problem: 'mermaid could not render this diagram', verbatim };
 }
 
 // ── Rendering ────────────────────────────────────────────────────────
@@ -567,7 +582,9 @@ async function answer(request) {
 
   // Nothing else exists in protocol 1. Saying so beats a silent empty reply,
   // which would reach the author as "returned no body".
-  return { error: `this hook does not know the operation '${request.op}'` };
+  return {
+    error: { problem: `this hook does not know the operation '${request.op}'` },
+  };
 }
 
 // ── Listening ────────────────────────────────────────────────────────
@@ -634,9 +651,12 @@ async function main() {
       } catch (cause) {
         reply =
           cause instanceof Refused
-            ? { error: cause.message }
+            ? { error: cause.diagnostic }
             : {
-                error: `this hook failed to render the block: ${cause?.message}`,
+                error: {
+                  problem: 'this hook failed to render the block',
+                  verbatim: String(cause?.message),
+                },
               };
       }
       connection.end(JSON.stringify(reply));
