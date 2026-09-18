@@ -114,7 +114,7 @@ sample() {
     socket.on("end", () => {
       const reply = JSON.parse(Buffer.concat(chunks).toString("utf8"));
       if (reply.error) {
-        process.stderr.write(reply.error + "\n");
+        process.stderr.write(JSON.stringify(reply.error) + "\n");
         process.exit(1);
       }
       process.stdout.write(Buffer.from(reply.assets[0].data, "base64"));

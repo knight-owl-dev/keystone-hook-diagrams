@@ -344,10 +344,16 @@ function checkDirectives(content) {
 // Measured rather than documented, so a number that lands outside the block is
 // dropped along with the quote instead of being reported wrong.
 //
-// None of that loses mermaid's own text any more: `verbatim` carries it as it
-// arrived, beside the translation rather than instead of it.
-function refusalFrom(message, content) {
-  const verbatim = String(message);
+// Wherever a translation replaces mermaid's words, `verbatim` carries them as
+// they arrived — beside the translation rather than instead of it. The one
+// exception is below: "No diagram type detected" says nothing the sentence
+// standing in for it does not.
+//
+// The last branch is any other throw out of renderSvg, which is not always
+// mermaid's — a detached node or a dead execution context arrives here too. It
+// names no culprit for that reason; `verbatim` is what says who spoke.
+function refusalFrom(cause, content) {
+  const verbatim = String(cause?.message ?? cause);
   const flat = verbatim.replace(/\s+/g, ' ').trim();
 
   if (/No diagram type detected/i.test(flat)) {
@@ -377,7 +383,7 @@ function refusalFrom(message, content) {
     return { problem: 'mermaid could not parse this diagram', verbatim };
   }
 
-  return { problem: 'mermaid could not render this diagram', verbatim };
+  return { problem: 'this diagram did not render', verbatim };
 }
 
 // ── Rendering ────────────────────────────────────────────────────────
@@ -525,7 +531,7 @@ async function transform(request) {
   try {
     diagram = await renderSvg(drawable, houseStyle());
   } catch (cause) {
-    throw new Refused(refusalFrom(cause?.message, content));
+    throw new Refused(refusalFrom(cause, content));
   }
 
   let reply;
@@ -654,7 +660,10 @@ async function main() {
             : {
                 error: {
                   problem: 'this hook failed to render the block',
-                  verbatim: String(cause?.message),
+                  // `?? cause` because a thrown non-Error has no message, and
+                  // the word 'undefined' behind Keystone's quote bar reads as
+                  // something the renderer said.
+                  verbatim: String(cause?.message ?? cause),
                 },
               };
       }
