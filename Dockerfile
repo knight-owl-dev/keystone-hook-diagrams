@@ -12,7 +12,7 @@
 # ---------- dependencies ----------
 # The only stage that needs a package manager. Nothing from here reaches the
 # final image except the tree npm resolves and the node binary itself.
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS deps
+FROM node:22-alpine@sha256:b6f26b36c8ff49624cfdac716b8ea1138d606df02586a77d364bb5536a634f85 AS deps
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ RUN npm ci --omit=dev
 # The two digests are coupled: node is linked against this Alpine's musl, so
 # bumping one without the other risks an ABI mismatch. node:22-alpine is built
 # on Alpine 3.24, which is what the tag below tracks.
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
 # Chromium from the distro: puppeteer-core drives a browser, it does not ship
 # one, and a distro build is what gets the security updates.
