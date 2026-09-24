@@ -17,6 +17,10 @@
   // a no-op run.
   "prConcurrentLimit": 5,
 
+  // A weekly run under the default hourly cap leaves every update past the
+  // second for next week; prConcurrentLimit already bounds the CI load.
+  "prHourlyLimit": 0,
+
   "ignorePaths": [
     // Builds its image rather than pulling one — a :local tag has no registry
     // to check.
@@ -34,16 +38,6 @@
         "CI_TOOLS_IMAGE \\?= (?<depName>\\S+):(?<currentValue>[^:@\\s]+)@(?<currentDigest>sha256:[0-9a-f]{64})"
       ],
       "datasourceTemplate": "docker"
-    },
-    {
-      // A tool version passed as a plain action input is invisible to the
-      // github-actions manager. The `# renovate:` comment above such a line
-      // names what the value is.
-      "customType": "regex",
-      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+[\\w-]+: '(?<currentValue>[^']+)'"
-      ]
     },
     {
       // A matrix leg names its runner under a key of its own, and the
@@ -100,6 +94,14 @@
     {
       "matchPackageNames": ["aquasecurity/trivy", "aquasecurity/trivy-action"],
       "enabled": false
+    },
+
+    // The github-actions manager reads renovate.yml's renovate-version input
+    // as this image. The input takes a version, so a digest has nowhere to go.
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/renovatebot/renovate"],
+      "pinDigests": false
     },
 
     // mermaid and puppeteer-core are grouped, not disabled: ci.yml's image job
