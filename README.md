@@ -29,7 +29,7 @@ The protocol and what a hook owes are in Keystone's manual:
 npm versions are pinned in `package-lock.json`, which `make resolve` regenerates
 along with `package.json`. Both base images are pinned by manifest-list digest
 inline in their `FROM` lines, where Renovate can see them. The build resolves
-the dependency tree on `node:22-alpine`, then copies the node binary and that
+the dependency tree on `node:26-alpine`, then copies the node binary and that
 tree onto a plain `alpine`, so the published image carries no npm, npx, yarn or
 corepack.
 
