@@ -141,4 +141,7 @@ done
 # The look axis, held against theme-default: the only setting that differs.
 sample "look-hand-drawn" -e "KEYSTONE_DIAGRAMS_LOOK=handDrawn"
 
+# The layout axis, held against theme-default the same way.
+sample "layout-elk" -e "KEYSTONE_DIAGRAMS_LAYOUT=elk"
+
 echo "OK  ${OUT_DIR}"

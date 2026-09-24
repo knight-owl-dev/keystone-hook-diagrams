@@ -57,7 +57,7 @@ mounted there.
 {
   "protocols": [1],
   "targets": ["mermaid"],
-  "identity": "v1.4.4/theme=neutral/font=Noto Serif, serif/look=classic",
+  "identity": "v1.5.0/theme=neutral/font=Noto Serif, serif/look=classic/layout=dagre",
   "formats": [["pdf", "docx", "odt"], ["epub"]]
 }
 ```
@@ -109,13 +109,14 @@ Keystone forwards them without knowing what they are.
 | --- | --- | --- |
 | `KEYSTONE_DIAGRAMS_THEME` | `default`, `base`, `dark`, `forest`, `neutral` | `default` |
 | `KEYSTONE_DIAGRAMS_LOOK` | `classic`, `handDrawn` | `classic` |
+| `KEYSTONE_DIAGRAMS_LAYOUT` | `dagre`, `elk` | `dagre` |
 | `KEYSTONE_DIAGRAMS_FONT` | a CSS font stack | `Noto Sans, sans-serif` |
 
-A theme or look mermaid does not know is refused rather than ignored, because
-mermaid would silently draw its default and restyle the book. A font that does
-not resolve is a warning: a stack is meant to fall through, and the fallback is
-legible. Both arrive as `describe` diagnostics rather than per-diagram errors —
-the project set them, so no one block is at fault.
+A theme, look or layout mermaid does not know is refused rather than ignored,
+because mermaid would silently draw its default and restyle the book. A font
+that does not resolve is a warning: a stack is meant to fall through, and the
+fallback is legible. Both arrive as `describe` diagnostics rather than
+per-diagram errors — the project set them, so no one block is at fault.
 
 A diagram is drawn in one palette, in every format and on every screen. There is
 no second palette under `prefers-color-scheme`: that query reports the operating
@@ -125,8 +126,8 @@ wants dark diagrams sets `dark`.
 
 ### What each setting draws
 
-The same flowchart at every theme, and at `handDrawn`. Rendered by this image
-through the raster path, so these are the pictures a PDF gets.
+The same flowchart at every theme, at `handDrawn` and at `elk`. Rendered by
+this image through the raster path, so these are the pictures a PDF gets.
 
 | | |
 | --- | --- |
@@ -136,6 +137,8 @@ through the raster path, so these are the pictures a PDF gets.
 | ![base](docs/samples/theme-base.png) | ![forest](docs/samples/theme-forest.png) |
 | `dark` | `handDrawn`, at the `default` theme |
 | ![dark](docs/samples/theme-dark.png) | ![handDrawn](docs/samples/look-hand-drawn.png) |
+| `elk`, at the `default` theme | |
+| ![elk](docs/samples/layout-elk.png) | |
 
 ## Running it
 

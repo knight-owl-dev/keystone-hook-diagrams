@@ -151,12 +151,13 @@ async function main() {
   // here — an independent copy is what holds the hook to its defaults.
   const theme = setting('THEME') || 'default';
   const look = setting('LOOK') || 'classic';
+  const layout = setting('LAYOUT') || 'dagre';
   const font = setting('FONT') || 'Noto Sans, sans-serif';
   const version = (process.env.IMAGE_VERSION || '').trim();
   const expected =
     !version || version === 'local'
       ? null
-      : `${version}/theme=${theme}/font=${font}/look=${look}`;
+      : `${version}/theme=${theme}/font=${font}/look=${look}/layout=${layout}`;
 
   await check('describe carries the cache identity', async () => {
     if (!expected) {

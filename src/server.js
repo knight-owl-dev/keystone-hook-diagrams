@@ -92,10 +92,15 @@ const PROJECT_FONT =
 const PROJECT_LOOK =
   (process.env.KEYSTONE_DIAGRAMS_LOOK || '').trim() || 'classic';
 
-// Mermaid ignores a theme or a look it does not know and draws its default
-// instead, so a typo in either would restyle a whole book in silence.
+// dagre rather than mermaid's own ELK keeps the layout books were drawn with.
+const PROJECT_LAYOUT =
+  (process.env.KEYSTONE_DIAGRAMS_LAYOUT || '').trim() || 'dagre';
+
+// Mermaid ignores a theme, look or layout it does not know and draws its
+// default instead, so a typo in any would restyle a whole book in silence.
 const THEMES = new Set(['default', 'base', 'dark', 'forest', 'neutral']);
 const LOOKS = new Set(['classic', 'handDrawn']);
+const LAYOUTS = new Set(['dagre', 'elk']);
 
 // There is deliberately no lettering size here. A figure is scaled by the
 // container it is placed in, so a size set at render time does not survive to
@@ -117,6 +122,7 @@ function houseStyle() {
   return {
     theme: PROJECT_THEME,
     look: PROJECT_LOOK,
+    layout: PROJECT_LAYOUT,
     handDrawnSeed: HAND_DRAWN_SEED,
     htmlLabels: false,
     themeCSS: '.edgeLabel rect{opacity:1}',
@@ -139,7 +145,7 @@ function identity() {
   if (!IMAGE_VERSION || IMAGE_VERSION === 'local') return null;
   // Every setting resolves, so this names what was drawn rather than what the
   // project happened to spell out.
-  return `${IMAGE_VERSION}/theme=${PROJECT_THEME}/font=${PROJECT_FONT}/look=${PROJECT_LOOK}`;
+  return `${IMAGE_VERSION}/theme=${PROJECT_THEME}/font=${PROJECT_FONT}/look=${PROJECT_LOOK}/layout=${PROJECT_LAYOUT}`;
 }
 
 // What is wrong with how this hook was configured, for `describe` to carry.
@@ -172,6 +178,12 @@ function houseStyleDiagnostics() {
     diagnostics.push({
       severity: 'error',
       ...wrong('KEYSTONE_DIAGRAMS_LOOK', PROJECT_LOOK, 'look', LOOKS),
+    });
+  }
+  if (!LAYOUTS.has(PROJECT_LAYOUT)) {
+    diagnostics.push({
+      severity: 'error',
+      ...wrong('KEYSTONE_DIAGRAMS_LAYOUT', PROJECT_LAYOUT, 'layout', LAYOUTS),
     });
   }
 
