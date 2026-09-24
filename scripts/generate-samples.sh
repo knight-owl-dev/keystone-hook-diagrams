@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# generate-samples.sh — Render the theme and look samples the README embeds
+# generate-samples.sh — Render the theme and look samples the README embeds,
+# once per layout
 #
 # One container per sample: a setting is read once at startup, the same reason
 # test-image.sh starts three. Driving it through the environment rather than a
@@ -79,7 +80,8 @@ sample() {
   local slug="${1}"
   shift
 
-  local name="ks-sample-${slug}-$$"
+  # A slug is <layout>/<sample>; a container name cannot hold the slash.
+  local name="ks-sample-${slug//\//-}-$$"
   CONTAINERS+=("${name}")
   VOLUMES+=("${name}-hooks")
 
@@ -96,6 +98,7 @@ sample() {
     "${IMAGE_TAG}" > /dev/null
 
   wait_for_socket "${name}"
+  mkdir -p "$(dirname "${TMP_DIR}/${slug}")" "$(dirname "${OUT_DIR}/${slug}")"
 
   docker exec -e DIAGRAM="${DIAGRAM}" "${name}" node -e '
     const net = require("node:net");
@@ -130,15 +133,19 @@ sample() {
   echo "  ${slug}.png  ${size} bytes"
 }
 
-mkdir -p "${OUT_DIR}"
-
 echo "Rendering samples with ${IMAGE_TAG} ..."
 
-for theme in default base dark forest neutral; do
-  sample "theme-${theme}" -e "KEYSTONE_DIAGRAMS_THEME=${theme}"
-done
+for layout in dagre elk; do
+  for theme in default base dark forest neutral; do
+    sample "${layout}/theme-${theme}" \
+      -e "KEYSTONE_DIAGRAMS_LAYOUT=${layout}" \
+      -e "KEYSTONE_DIAGRAMS_THEME=${theme}"
+  done
 
-# The look axis, held against theme-default: the only setting that differs.
-sample "look-hand-drawn" -e "KEYSTONE_DIAGRAMS_LOOK=handDrawn"
+  # The look axis, held against theme-default: the only setting that differs.
+  sample "${layout}/look-hand-drawn" \
+    -e "KEYSTONE_DIAGRAMS_LAYOUT=${layout}" \
+    -e "KEYSTONE_DIAGRAMS_LOOK=handDrawn"
+done
 
 echo "OK  ${OUT_DIR}"
