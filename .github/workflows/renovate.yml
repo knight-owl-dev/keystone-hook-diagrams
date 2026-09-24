@@ -42,11 +42,11 @@ jobs:
           repositories: ${{ github.event.repository.name }}
 
       - name: Run Renovate
-        uses: renovatebot/github-action@37beffda261423addd537c33f2d126df7f6ffbab # v46.2.6
+        uses: renovatebot/github-action@9fea9f0fbf80401026d11d03911d62b1f70fef1f # v46.3.3
         with:
           token: ${{ steps.app-token.outputs.token }}
           # The action is SHA-pinned, but its default renovate-version is a
           # floating major tag — this names the container that actually runs.
-          renovate-version: '44.87.1'
+          renovate-version: '44.111.4'
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
