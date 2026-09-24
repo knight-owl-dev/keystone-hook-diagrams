@@ -126,19 +126,18 @@ wants dark diagrams sets `dark`.
 
 ### What each setting draws
 
-The same flowchart at every theme, at `handDrawn` and at `elk`. Rendered by
-this image through the raster path, so these are the pictures a PDF gets.
+The same flowchart at every theme and at `handDrawn`, under each layout.
+Rendered by this image through the raster path, so these are the pictures a PDF
+gets.
 
-| | |
-| --- | --- |
-| `default` | `neutral` |
-| ![default](docs/samples/theme-default.png) | ![neutral](docs/samples/theme-neutral.png) |
-| `base` | `forest` |
-| ![base](docs/samples/theme-base.png) | ![forest](docs/samples/theme-forest.png) |
-| `dark` | `handDrawn`, at the `default` theme |
-| ![dark](docs/samples/theme-dark.png) | ![handDrawn](docs/samples/look-hand-drawn.png) |
-| `elk`, at the `default` theme | |
-| ![elk](docs/samples/layout-elk.png) | |
+| setting | `dagre` | `elk` |
+| --- | --- | --- |
+| `default` | ![default, dagre](docs/samples/dagre/theme-default.png) | ![default, elk](docs/samples/elk/theme-default.png) |
+| `neutral` | ![neutral, dagre](docs/samples/dagre/theme-neutral.png) | ![neutral, elk](docs/samples/elk/theme-neutral.png) |
+| `base` | ![base, dagre](docs/samples/dagre/theme-base.png) | ![base, elk](docs/samples/elk/theme-base.png) |
+| `forest` | ![forest, dagre](docs/samples/dagre/theme-forest.png) | ![forest, elk](docs/samples/elk/theme-forest.png) |
+| `dark` | ![dark, dagre](docs/samples/dagre/theme-dark.png) | ![dark, elk](docs/samples/elk/theme-dark.png) |
+| `handDrawn`, at the `default` theme | ![handDrawn, dagre](docs/samples/dagre/look-hand-drawn.png) | ![handDrawn, elk](docs/samples/elk/look-hand-drawn.png) |
 
 ## Running it
 
