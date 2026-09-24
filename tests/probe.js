@@ -42,12 +42,15 @@ const VECTOR_FORMATS = ['epub'];
 // The brackets are the test: a title is escaped on the way out, because an
 // unescaped one closes the markdown image early. The word is distinctive so its
 // absence from the render means the title was blanked, not merely unmatched.
+//
+// The line break is the other test: an HTML label serializes it as a bare
+// `<br>`, which breaks the SVG as XML.
 const TITLE = 'Zebra [A] Marmalade';
 const DIAGRAM = `---
 title: ${TITLE}
 ---
 flowchart LR
-  A[Start] --> B[Finish]
+  A["Start<br/>here"] --> B[Finish]
 `;
 
 // The mistake an author actually makes: `theme` is a key inside `init`, not a
@@ -309,6 +312,17 @@ async function main() {
       'the SVG carries a palette keyed to the operating system',
     );
     return painted[0];
+  });
+
+  // A readable assertion, not a parse: node has no XML parser. HTML labels are
+  // the one source of both faults — a void element XML rejects, and a
+  // `<foreignObject>` many readers draw as an empty box.
+  await check('the vector labels are SVG text', () => {
+    expect(svg, 'epub did not render');
+    expect(!svg.includes('<foreignObject'), 'labels are HTML in foreignObject');
+    const unclosed = /<(br|hr|img)\b[^>]*(?<!\/)>/.exec(svg);
+    expect(!unclosed, `unclosed ${unclosed?.[0]} — the SVG is not XML`);
+    return 'no foreignObject, no unclosed void element';
   });
 
   await check('the title is alt text, escaped', () => {
