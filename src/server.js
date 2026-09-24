@@ -118,6 +118,10 @@ const LAYOUTS = new Set(['dagre', 'elk']);
 // half-transparent rect then lets the edge show through; `themeCSS` makes it
 // opaque. The `default` theme's fill carries its own alpha, so an edge still
 // shows faintly there.
+//
+// `minNodeWidth` widens a short label to 120px by default, which widens the
+// diagram and so, at the width the wrapper gives it, shrinks its lettering. 0
+// fits each node to its text.
 function houseStyle() {
   return {
     theme: PROJECT_THEME,
@@ -127,6 +131,8 @@ function houseStyle() {
     htmlLabels: false,
     themeCSS: '.edgeLabel rect{opacity:1}',
     themeVariables: { fontFamily: PROJECT_FONT },
+    flowchart: { minNodeWidth: 0 },
+    state: { minNodeWidth: 0 },
   };
 }
 
