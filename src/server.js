@@ -103,11 +103,23 @@ const LOOKS = new Set(['classic', 'handDrawn']);
 // larger size produces is then scaled down further. Measured, a 2.8x change in
 // the requested size reached the page as 1.9x, and by a factor that differed per
 // diagram. What decides the size on the page is the width the wrapper gives it.
+//
+// Labels are SVG text in every format. HTML labels sit in `<foreignObject>`,
+// which many EPUB readers leave blank inside an `<img>`, and serialize a
+// `<br>` that no XML parser accepts. Raster formats follow so a book's formats
+// agree.
+//
+// SVG text drops the opaque HTML background an edge label had, and the theme's
+// half-transparent rect then lets the edge show through; `themeCSS` makes it
+// opaque. The `default` theme's fill carries its own alpha, so an edge still
+// shows faintly there.
 function houseStyle() {
   return {
     theme: PROJECT_THEME,
     look: PROJECT_LOOK,
     handDrawnSeed: HAND_DRAWN_SEED,
+    htmlLabels: false,
+    themeCSS: '.edgeLabel rect{opacity:1}',
     themeVariables: { fontFamily: PROJECT_FONT },
   };
 }
