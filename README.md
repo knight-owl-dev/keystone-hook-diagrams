@@ -146,12 +146,22 @@ health-gated:
 
 ```yaml
 services:
+  keystone:
+    # ...
+    depends_on:
+      diagrams:
+        condition: service_healthy
+    volumes:
+      - hooks:/keystone/.hooks:ro
+
   diagrams:
     image: ghcr.io/knight-owl-dev/keystone-hook-diagrams:<tag>@sha256:<digest>
     healthcheck:
       test: ["CMD", "test", "-S", "/hooks/diagrams.sock"]
       interval: 30s
       start_interval: 1s
+      timeout: 2s
+      retries: 3
       start_period: 30s
     network_mode: none
     read_only: true
@@ -161,16 +171,25 @@ services:
     environment:
       HOME: /tmp
       HOOK_SOCKET: /hooks/diagrams.sock
+      KEYSTONE_DIAGRAMS_THEME: ${KEYSTONE_DIAGRAMS_THEME:-}
+      KEYSTONE_DIAGRAMS_FONT: ${KEYSTONE_DIAGRAMS_FONT:-}
+      KEYSTONE_DIAGRAMS_LOOK: ${KEYSTONE_DIAGRAMS_LOOK:-}
     volumes:
       - hooks:/hooks
+
+volumes:
+  hooks:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,mode=1777
 ```
 
 There is no `user:` — the hook keeps the image's own UID, which is what makes
 the `0666` socket meaningful. Keystone connects as whoever ran the build.
 
-The digest above is a placeholder. The template pins the real one in
-`pins/keystone-hook-diagrams.lock`, and Renovate moves it when this image
-publishes.
+The tag and digest above are placeholders; pin both to a published release.
 
 ## Working on it
 
