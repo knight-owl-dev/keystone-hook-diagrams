@@ -520,7 +520,8 @@ function withBackground(diagram) {
 // block that is nowhere near print resolution. The source is vector, so the
 // size it is drawn at is free: it is laid out at RASTER_WIDTH and captured at
 // RASTER_SCALE, which puts any diagram near 400 DPI wherever the author places
-// it. The height follows the viewBox, so nothing is stretched.
+// it. The height follows the viewBox, so nothing is stretched. Returns base64:
+// the bytes type puppeteer returns varies by Node version.
 async function rasterize(diagram) {
   await rasterPage.setContent(
     `<!doctype html><html><body style="margin:0;background:${diagram.background}">${diagram.svg}</body></html>`,
@@ -541,7 +542,11 @@ async function rasterize(diagram) {
   if (!sized) throw new Error('the rendered SVG did not reach the raster page');
 
   const element = await rasterPage.$('svg');
-  return element.screenshot({ type: 'png', omitBackground: false });
+  return element.screenshot({
+    type: 'png',
+    omitBackground: false,
+    encoding: 'base64',
+  });
 }
 
 // ── The protocol ─────────────────────────────────────────────────────
@@ -573,7 +578,7 @@ async function transform(request) {
         {
           name: 'diagram.png',
           media_type: 'image/png',
-          data: png.toString('base64'),
+          data: png,
         },
       ],
     };
