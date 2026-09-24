@@ -12,7 +12,7 @@
 # ---------- dependencies ----------
 # The only stage that needs a package manager. Nothing from here reaches the
 # final image except the tree npm resolves and the node binary itself.
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS deps
 
 WORKDIR /app
 
@@ -23,13 +23,13 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 # ---------- runtime ----------
-# Alpine rather than node:22-alpine: that image carries npm, npx, yarn and
+# Alpine rather than node:26-alpine: that image carries npm, npx, yarn and
 # corepack, which a service running only `node src/server.js` never calls. Each
 # brings a vendored dependency tree that every CVE scan then reports. Copying
 # the node binary out keeps the pinned runtime without them.
 #
 # The two digests are coupled: node is linked against this Alpine's musl, so
-# bumping one without the other risks an ABI mismatch. node:22-alpine is built
+# bumping one without the other risks an ABI mismatch. node:26-alpine is built
 # on Alpine 3.24, which is what the tag below tracks.
 FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
