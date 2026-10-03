@@ -69,7 +69,7 @@ endif
 
 # Keep in sync with the trivy-action `version:` in publish.yml and
 # cve-monitor.yml (see trivy.yaml).
-TRIVY_IMAGE := aquasec/trivy:0.74.0
+TRIVY_IMAGE := aquasec/trivy:0.75.0
 
 scan: build
 	@echo "Scanning $(IMAGE_TAG) for vulnerabilities$(if $(NO_IGNORE), (suppressions disabled),)..."

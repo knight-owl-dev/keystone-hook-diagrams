@@ -114,7 +114,7 @@ jobs:
           trivy-config: trivy.yaml
           trivyignores: .trivyignore.yaml
           # Keep in sync with the Makefile and cve-monitor.yml (see trivy.yaml).
-          version: v0.74.0
+          version: v0.75.0
 
       # No tag: this pushes the manifest under its digest only, so neither arch
       # claims :latest on its own. The merge job names them.
