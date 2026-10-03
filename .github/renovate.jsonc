@@ -96,14 +96,6 @@
       "enabled": false
     },
 
-    // The github-actions manager reads renovate.yml's renovate-version input
-    // as this image. The input takes a version, so a digest has nowhere to go.
-    {
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["ghcr.io/renovatebot/renovate"],
-      "pinDigests": false
-    },
-
     // mermaid and puppeteer-core are grouped, not disabled: ci.yml's image job
     // renders against the bump on both architectures, so the PR that proposes
     // one is where it gets checked. They travel together because
