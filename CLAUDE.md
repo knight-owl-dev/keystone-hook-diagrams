@@ -49,7 +49,7 @@ unverified binary source, or an unpinned dependency.
 - **shfmt writes `2> /dev/null`**, with the space.
 - **Biome formats `src/` and `tests/*.js` at width 80.** It has no array fill
   mode and discards author line breaks, so a compact list goes one per line and
-  a short multi-line call collapses. Run `make lint-js-fix` and take the result.
+  a short multi-line call collapses. Run `make lint-fix` and take the result.
 - **An Action pin carries its full semver comment** (`# v7.0.1`) —
   `validate-action-pins` resolves the SHA against that exact tag.
 - **Keep issue numbers out of commit messages.** `Refs #NN` and `Fixes #NN`
