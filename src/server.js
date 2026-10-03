@@ -122,6 +122,12 @@ const LAYOUTS = new Set(['dagre', 'elk']);
 // `minNodeWidth` widens a short label to 120px by default, which widens the
 // diagram and so, at the width the wrapper gives it, shrinks its lettering. 0
 // fits each node to its text.
+//
+// `orientFeedbackEdges` reroutes an edge feeding back into a subgraph, on by
+// default since mermaid 12.1; off keeps the routing ELK books were drawn with.
+//
+// `straightenEdges` pulls an edge out of the lane ELK reserved for its label,
+// and from 12.1 the label follows it onto any edge running alongside.
 function houseStyle() {
   return {
     theme: PROJECT_THEME,
@@ -133,6 +139,7 @@ function houseStyle() {
     themeVariables: { fontFamily: PROJECT_FONT },
     flowchart: { minNodeWidth: 0 },
     state: { minNodeWidth: 0 },
+    elk: { orientFeedbackEdges: false, straightenEdges: false },
   };
 }
 
