@@ -25,6 +25,7 @@
     "imagetools",
     "libblkid",
     "libcrypto",
+    "libexpat",
     "libgcc",
     "libmount",
     "libstdc",

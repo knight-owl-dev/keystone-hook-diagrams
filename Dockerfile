@@ -48,9 +48,11 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 # transitive dependency is otherwise whatever the cached layer resolved. The
 # layer key is this command, so a registry cache keeps serving that build until
 # the string changes — the floor is both the fix and the cache bust. `>=` keeps
-# it working when the repository moves on. Drop each once the base ships it.
+# it working when the repository moves on. Drop each once the base ships it,
+# or, for one the base lacks, once a base bump has rebuilt this layer.
 #   libcrypto3, libssl3            CVE-2026-14456
 #   libblkid, libmount, libuuid    CVE-2026-53612 and 20 more in util-linux
+#   libexpat                       CVE-2026-93990
 #
 # DL3018: the rest are unpinned on purpose. Alpine keeps only the current build
 # of a package, so an exact version breaks the build instead of holding it
@@ -59,7 +61,8 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates \
     libstdc++ libgcc font-noto font-opensans \
     "libcrypto3>=3.5.8-r0" "libssl3>=3.5.8-r0" \
-    "libblkid>=2.42.3-r1" "libmount>=2.42.3-r1" "libuuid>=2.42.3-r1"
+    "libblkid>=2.42.3-r1" "libmount>=2.42.3-r1" "libuuid>=2.42.3-r1" \
+    "libexpat>=2.8.5-r0"
 
 COPY --from=deps /usr/local/bin/node /usr/local/bin/node
 COPY --from=deps /app/node_modules /app/node_modules
