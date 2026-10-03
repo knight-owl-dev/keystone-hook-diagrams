@@ -124,6 +124,21 @@ system, while the reader's theme is a separate choice. WebKit ignores it for an
 SVG referenced by `<img>` in any case, which is every reader on iOS. A book that
 wants dark diagrams sets `dark`.
 
+### Per diagram
+
+The settings above and the house style below are defaults. A block overrides
+any of them, or sets anything else mermaid accepts, in its frontmatter
+`config:` or an `%%{init: …}%%` directive; mermaid documents
+[both](https://mermaid.js.org/config/configuration.html) and
+[every key](https://mermaid.js.org/config/schema-docs/config.html).
+
+| key | value | why |
+| --- | --- | --- |
+| `htmlLabels` | `false` | HTML labels render blank in many EPUB readers |
+| `flowchart.minNodeWidth`, `state.minNodeWidth` | `0` | a padded node widens the diagram and shrinks its lettering |
+| `elk.orientFeedbackEdges` | `false` | keeps the ELK routing from before mermaid 12.1 |
+| `elk.straightenEdges` | `false` | a straightened edge leaves its label overlapping the edge beside it |
+
 ### What each setting draws
 
 The same flowchart at every theme and at `handDrawn`, under each layout.

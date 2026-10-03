@@ -25,11 +25,3 @@
 #    expired_at: 2026-07-21  # ~45 days out, matching the dependency's cadence
 #
 vulnerabilities:
-  - id: CVE-2026-4800
-    statement: >-
-      lodash-es: _.template imports code execution, fixed in 4.18.0. mermaid
-      12.0.0 pins chevrotain ~11.1.2, which pins lodash-es 4.17.23. Never
-      loaded: Node requires only puppeteer-core, and mermaid's browser bundle
-      carries no _.template. Tracking: #45. Remove once mermaid ships on
-      chevrotain >= 12.
-    expired_at: 2026-11-07
