@@ -40,8 +40,9 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 # KEYSTONE_DIAGRAMS_FONT can resolve, so opensans is asked for by name rather
 # than relied on as something another package happens to pull in.
 #
-# libstdc++ and libgcc are what the copied node binary links against; chromium
-# would pull them anyway, but this image does not depend on that.
+# The copied node binary links against libstdc++, libgcc and, on amd64,
+# libatomic. Each is named so the image keeps it whatever chromium depends on.
+# A node bump that links a new library has to add it here.
 #
 # The floored packages are chromium's own dependencies, named here only to
 # raise them. `apk add` on an already-installed package is a no-op, so a
@@ -59,7 +60,7 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 # still.
 # hadolint ignore=DL3018
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates \
-    libstdc++ libgcc font-noto font-opensans \
+    libstdc++ libgcc libatomic font-noto font-opensans \
     "libcrypto3>=3.5.8-r0" "libssl3>=3.5.8-r0" \
     "libblkid>=2.42.3-r1" "libmount>=2.42.3-r1" "libuuid>=2.42.3-r1" \
     "libexpat>=2.8.5-r0"
