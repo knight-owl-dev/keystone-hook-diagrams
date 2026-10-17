@@ -23,6 +23,7 @@
     "harfbuzz",
     "ignorefile",
     "imagetools",
+    "libatomic",
     "libblkid",
     "libcrypto",
     "libexpat",
