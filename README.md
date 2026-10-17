@@ -136,8 +136,6 @@ any of them, or sets anything else mermaid accepts, in its frontmatter
 | --- | --- | --- |
 | `htmlLabels` | `false` | HTML labels render blank in many EPUB readers |
 | `flowchart.minNodeWidth`, `state.minNodeWidth` | `0` | a padded node widens the diagram and shrinks its lettering |
-| `elk.orientFeedbackEdges` | `false` | keeps the ELK routing from before mermaid 12.1 |
-| `elk.straightenEdges` | `false` | a straightened edge leaves its label overlapping the edge beside it |
 
 ### What each setting draws
 
