@@ -1,0 +1,6 @@
+flowchart LR
+  R{Router} -->|a| X[One]
+  R -->|b| Y[Two]
+  R -->|c| Z[Three]
+  X -->|back| R
+  Z -->|retry| R

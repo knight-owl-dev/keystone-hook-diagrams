@@ -1,0 +1,7 @@
+flowchart TD
+  subgraph S
+    A --> B
+    B --> C
+  end
+  C -->|retry| X
+  X -->|loop| A

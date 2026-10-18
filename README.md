@@ -139,18 +139,8 @@ any of them, or sets anything else mermaid accepts, in its frontmatter
 
 ### What each setting draws
 
-The same flowchart at every theme and at `handDrawn`, under each layout.
-Rendered by this image through the raster path, so these are the pictures a PDF
-gets.
-
-| setting | `dagre` | `elk` |
-| --- | --- | --- |
-| `default` | ![default, dagre](docs/samples/dagre/theme-default.png) | ![default, elk](docs/samples/elk/theme-default.png) |
-| `neutral` | ![neutral, dagre](docs/samples/dagre/theme-neutral.png) | ![neutral, elk](docs/samples/elk/theme-neutral.png) |
-| `base` | ![base, dagre](docs/samples/dagre/theme-base.png) | ![base, elk](docs/samples/elk/theme-base.png) |
-| `forest` | ![forest, dagre](docs/samples/dagre/theme-forest.png) | ![forest, elk](docs/samples/elk/theme-forest.png) |
-| `dark` | ![dark, dagre](docs/samples/dagre/theme-dark.png) | ![dark, elk](docs/samples/elk/theme-dark.png) |
-| `handDrawn`, at the `default` theme | ![handDrawn, dagre](docs/samples/dagre/look-hand-drawn.png) | ![handDrawn, elk](docs/samples/elk/look-hand-drawn.png) |
+[The render page](https://knight-owl-dev.github.io/keystone-hook-diagrams/)
+shows what the latest release draws at each layout, theme and look.
 
 ## Running it
 
@@ -209,11 +199,17 @@ The tag and digest above are placeholders; pin both to a published release.
 ```bash
 make build        # build keystone-hook-diagrams:local
 make test-image   # start it three ways and render against each
-make samples      # re-render docs/samples, which the README embeds
+make test-corpus  # render the corpus and check it against its lockfile
+make corpus       # re-render it and rewrite the lockfile
 make test         # the above, plus the bats suites
 make scan         # Trivy, at the policy publish enforces
 make lint         # hadolint, shellcheck, shfmt, biome, actionlint, markdownlint, cspell
 ```
+
+[`tests/corpus/renders.sha256`](tests/corpus/renders.sha256) holds one hash
+per corpus render and reflects `main`. A change to what the image draws fails
+CI until `make corpus` is committed, so the lockfile's history records every
+such change. CI uploads the renders for comparison against the page.
 
 `make test-image` is what proves the image. `describe` answers from constants,
 so only a render reaches mermaid and Chromium.
@@ -227,8 +223,8 @@ so only a render reaches mermaid and Chromium.
 
 `make release BUMP=patch` stamps [`version`](version) and opens a
 `release/vX.Y.Z` PR. Merging it promotes tag `vX.Y.Z`, which builds, tests,
-scans, pushes and signs the image. The tag, the `version` file and the published
-image tag are always one number.
+scans, pushes and signs the image, then deploys the render page. The tag, the
+`version` file and the published image tag are always one number.
 
 A release refuses when nothing that reaches the image has changed since the
 last one.

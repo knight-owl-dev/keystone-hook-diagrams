@@ -16,7 +16,7 @@ DOCKER_TTY ?= $(if $(IS_TTY),-t)
 
 .PHONY: sync resolve build scan clean set-version get-version release \
 	lint lint-fix lint-docker lint-sh lint-sh-fmt lint-sh-fmt-fix lint-js lint-js-fix \
-	lint-actions lint-md lint-md-fix lint-spell test test-bats test-image samples help
+	lint-actions lint-md lint-md-fix lint-spell test test-bats test-image test-corpus corpus help
 
 # Resolve latest versions, build, and test the image
 sync: resolve build test-image
@@ -48,15 +48,19 @@ release:
 build:
 	@docker compose build
 
-# Render the theme and look samples the README embeds. Regenerate when mermaid
-# or Chromium moves what a theme draws; nothing gates it.
-samples:
-	@IMAGE_TAG="$(IMAGE_TAG)" ./scripts/generate-samples.sh
+# Render the corpus and rewrite its lockfile. Run when test-corpus reports
+# drift, and commit the result. CORPUS_OUT keeps the renders.
+corpus:
+	@IMAGE_TAG="$(IMAGE_TAG)" ./scripts/corpus.sh write $(CORPUS_OUT)
 
 # Integration-test the built image. Runs host-side, because the container has
 # no shell and its ENTRYPOINT owns argv — tests/test-image.sh says why.
 test-image:
 	@IMAGE_TAG="$(IMAGE_TAG)" ./tests/test-image.sh
+
+# Render the corpus and check it against its lockfile
+test-corpus:
+	@IMAGE_TAG="$(IMAGE_TAG)" ./scripts/corpus.sh check $(CORPUS_OUT)
 
 # Scan the image for vulnerabilities. Policy lives in trivy.yaml; only the
 # suppression file is passed here. NO_IGNORE=1 reports what .trivyignore.yaml
@@ -197,8 +201,9 @@ BATS_FORMAT := $(if $(IS_TTY),--pretty)
 test-bats:
 	@$(BATS_RUNNER) $(BATS_FORMAT) -r tests/bats/
 
-# Everything testable. test-image needs a built image; test-bats does not.
-test: test-bats test-image
+# Everything testable. test-image and test-corpus need a built image; test-bats
+# does not.
+test: test-bats test-image test-corpus
 
 # Remove the local image
 clean:
@@ -234,9 +239,10 @@ help:
 	@echo "  make lint-sh           Lint shell scripts"
 	@echo "  make lint-sh-fmt       Check shell script formatting"
 	@echo "  make lint-sh-fmt-fix   Fix shell script formatting"
-	@echo "  make test              Run all tests (bats + image)"
+	@echo "  make test              Run all tests (bats + image + corpus)"
 	@echo "  make test-bats         Run BATS tests inside the ci-tools image"
 	@echo "  make test-image        Integration-test the built image"
-	@echo "  make samples           Re-render the theme samples in docs/samples"
+	@echo "  make test-corpus       Check the render corpus against its lockfile"
+	@echo "  make corpus            Re-render the corpus and rewrite its lockfile"
 	@echo "  make help              Show this message"
 	@echo ""

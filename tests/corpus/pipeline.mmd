@@ -1,0 +1,6 @@
+flowchart LR
+  S[Source] -->|parse| A[AST]
+  A -->|transform| B[IR]
+  B -->|emit| O[Output]
+  B -->|error| S
+  O -->|watch| S

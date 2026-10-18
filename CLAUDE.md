@@ -71,6 +71,11 @@ unverified binary source, or an unpinned dependency.
   for a report that never comes, and every PR hangs rather than fails — update
   the ruleset in the same change.
 
+- **The `github-pages` environment must allow `v*` tags.** Its default accepts
+  only `main`, and `publish.yml` deploys from a tag. It lives outside version
+  control, like the ruleset; a refused deploy fails the publish after the image
+  is signed.
+
 ## Releasing
 
 `make release BUMP=patch` stamps `version` and opens a `release/vX.Y.Z` PR;

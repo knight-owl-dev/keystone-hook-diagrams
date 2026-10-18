@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>keystone-hook-diagrams renders</title>
+
+    <!--
+      Built from renders.sha256 at load, so the page shows exactly the renders
+      the lockfile gates. publish.yml deploys it beside the renders and
+      `version`.
+    -->
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        --rule: #8884;
+      }
+
+      body {
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 16px;
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0;
+      }
+
+      .meta {
+        margin-top: 0.25rem;
+        opacity: 0.7;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--rule);
+        padding: 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th[scope="row"] {
+        font-weight: 600;
+      }
+
+      tr:first-child > th:first-child {
+        width: 9rem;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+
+      @media (max-width: 640px) {
+        tr:first-child > th:first-child {
+          width: 5rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>keystone-hook-diagrams</h1>
+    <p class="meta">
+      What <span id="version">the latest release</span> draws, through the
+      raster path a PDF gets. Each picture links to the SVG an EPUB gets.
+      <a href="https://github.com/knight-owl-dev/keystone-hook-diagrams">Source</a>
+    </p>
+
+    <h2>Diagrams</h2>
+    <p>The house style, at each layout.</p>
+    <table id="diagrams"></table>
+
+    <h2>Themes and looks</h2>
+    <p>
+      One diagram at each <code>KEYSTONE_DIAGRAMS_THEME</code> and
+      <code>KEYSTONE_DIAGRAMS_LOOK</code>.
+    </p>
+    <table id="settings"></table>
+
+    <script>
+      const LAYOUTS = ['dagre', 'elk'];
+
+      function cell(layout, setting, name) {
+        const base = `${layout}/${setting}/${name}`;
+        const alt = `${name}, ${setting}, ${layout}`;
+        return `
+          <td>
+            <a href="${base}.svg">
+              <img src="${base}.png" alt="${alt}" loading="lazy">
+            </a>
+          </td>`;
+      }
+
+      function row({ label, setting, name }) {
+        const cells = LAYOUTS.map((layout) => cell(layout, setting, name));
+        return `<tr><th scope="row">${label}</th>${cells.join('')}</tr>`;
+      }
+
+      function table(id, rows) {
+        const columns = LAYOUTS.map(
+          (layout) => `<th scope="col"><code>${layout}</code></th>`,
+        );
+        const head = `<tr><th></th>${columns.join('')}</tr>`;
+        document.getElementById(id).innerHTML = head + rows.map(row).join('');
+      }
+
+      async function main() {
+        const version = await fetch('version').then((r) => (r.ok ? r.text() : ''));
+        if (version.trim()) {
+          document.getElementById('version').textContent = `v${version.trim()}`;
+        }
+
+        // "<hash>  <layout>/<setting>/<name>.<ext>", one line per render. The
+        // first layout's PNGs name every setting and diagram.
+        const response = await fetch('renders.sha256');
+        if (!response.ok) throw new Error(`renders.sha256: ${response.status}`);
+        const lockfile = await response.text();
+        const renders = lockfile
+          .trim()
+          .split('\n')
+          .map((line) => line.split(/\s+/)[1])
+          .filter((path) => path.startsWith(`${LAYOUTS[0]}/`))
+          .filter((path) => path.endsWith('.png'))
+          .map((path) => {
+            const [, setting, file] = path.split('/');
+            return { setting, name: file.replace(/\.png$/, '') };
+          });
+
+        const house = renders.filter((r) => r.setting === 'house');
+        const strip = renders.filter((r) => r.setting !== 'house');
+
+        table(
+          'diagrams',
+          house.map(({ name }) => ({ label: name, setting: 'house', name })),
+        );
+
+        table(
+          'settings',
+          strip.map(({ setting, name }) => ({
+            label: setting.replace(/^(theme|look)-/, ''),
+            setting,
+            name,
+          })),
+        );
+      }
+
+      main().catch((error) => {
+        document.body.insertAdjacentHTML(
+          'beforeend',
+          `<p>Could not load the renders: ${error.message}</p>`,
+        );
+      });
+    </script>
+  </body>
+</html>
