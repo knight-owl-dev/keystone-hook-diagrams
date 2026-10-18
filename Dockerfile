@@ -11,8 +11,11 @@
 
 # ---------- dependencies ----------
 # The only stage that needs a package manager. Nothing from here reaches the
-# final image except the tree npm resolves and the node binary itself.
-FROM node:26-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS deps
+# final image except the tree npm resolves.
+#
+# The tree is pure JavaScript, so its Node need not match the runtime's. A
+# native module would: it has to build on node-chromium's Node line and musl.
+FROM node:26-alpine3.24@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS deps
 
 WORKDIR /app
 
@@ -23,54 +26,16 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 # ---------- runtime ----------
-# Alpine rather than node:26-alpine: that image carries npm, npx, yarn and
-# corepack, which a service running only `node src/server.js` never calls. Each
-# brings a vendored dependency tree that every CVE scan then reports. Copying
-# the node binary out keeps the pinned runtime without them.
-#
-# The two digests are coupled: node is linked against this Alpine's musl, so
-# bumping one without the other risks an ABI mismatch. node:26-alpine is built
-# on Alpine 3.24, which is what the tag below tracks.
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+# Node, Chromium and the fonts, from devops. Alpine cannot pin a package, so
+# the digest is what freezes them: every build, local or CI, renders with the
+# same bytes, which the render corpus's lockfile depends on. A CVE in them is
+# fixed there and arrives as a digest bump.
+FROM ghcr.io/knight-owl-dev/node-chromium:v1.7.0@sha256:2bb4332882e4f7f5f633a8763e7e46706ec8190f2aaae2d2d9f8da387c79c956
 
-# Chromium from the distro: puppeteer-core drives a browser, it does not ship
-# one, and a distro build is what gets the security updates.
-#
-# The font packages are contract, not incidental: the manual names what
-# KEYSTONE_DIAGRAMS_FONT can resolve, so opensans is asked for by name rather
-# than relied on as something another package happens to pull in.
-#
-# The copied node binary links against libstdc++, libgcc and, on amd64,
-# libatomic. Each is named so the image keeps it whatever chromium depends on.
-# A node bump that links a new library has to add it here.
-#
-# The floored packages are chromium's own dependencies, named here only to
-# raise them. `apk add` on an already-installed package is a no-op, so a
-# transitive dependency is otherwise whatever the cached layer resolved. The
-# layer key is this command, so a registry cache keeps serving that build until
-# the string changes — the floor is both the fix and the cache bust. `>=` keeps
-# it working when the repository moves on. Drop each once the base ships it,
-# or, for one the base lacks, once a base bump has rebuilt this layer.
-#   libcrypto3, libssl3            CVE-2026-14456
-#   libblkid, libmount, libuuid    CVE-2026-53612 and 20 more in util-linux
-#   libexpat                       CVE-2026-93990
-#
-# DL3018: the rest are unpinned on purpose. Alpine keeps only the current build
-# of a package, so an exact version breaks the build instead of holding it
-# still.
-# hadolint ignore=DL3018
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates \
-    libstdc++ libgcc libatomic font-noto font-opensans \
-    "libcrypto3>=3.5.8-r0" "libssl3>=3.5.8-r0" \
-    "libblkid>=2.42.3-r1" "libmount>=2.42.3-r1" "libuuid>=2.42.3-r1" \
-    "libexpat>=2.8.5-r0"
-
-COPY --from=deps /usr/local/bin/node /usr/local/bin/node
 COPY --from=deps /app/node_modules /app/node_modules
 COPY src /app/src
 
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # The socket directory ships with the image so a volume mounted over it
 # inherits this mode. Whichever container mounts an empty volume first decides

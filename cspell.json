@@ -1,6 +1,7 @@
 {
   "version": "0.2",
   "language": "en-US",
+  "ignorePaths": ["tests/corpus/renders.sha256"],
   "dictionaries": [
     "bash",
     "docker",
@@ -13,6 +14,7 @@
     "aquasecurity",
     "buildcache",
     "dagre",
+    "epub",
     "esbuild",
     "fangsong",
     "fontconfig",
@@ -23,7 +25,6 @@
     "harfbuzz",
     "ignorefile",
     "imagetools",
-    "libatomic",
     "libblkid",
     "libcrypto",
     "libexpat",
@@ -34,7 +35,6 @@
     "mermaid",
     "nosuch",
     "noto",
-    "opensans",
     "Pandoc",
     "pptr",
     "puppeteer",

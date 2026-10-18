@@ -90,10 +90,25 @@ jobs:
 
       - name: Test the image
         # The last runtime gate before a signed :latest — the scan above covers
-        # CVEs alone. CI's green is a claim about a tree; the unpinned `apk`
-        # floors resolve at build time, so a cache miss ships packages no CI run
-        # has started.
+        # CVEs alone. CI's green is a claim about a tree; this tests the image
+        # this run pushes.
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:verify
+
+      - name: Check the render corpus
+        # Proves the shipped image draws what the lockfile records, so the page
+        # deploys only gated renders.
+        run: make test-corpus IMAGE_TAG=keystone-hook-diagrams:verify CORPUS_OUT=_site
+
+      # One set reaches Pages; the hashes make either leg's identical.
+      - name: Assemble the page
+        if: matrix.arch == 'arm64'
+        run: cp site/index.html tests/corpus/renders.sha256 version _site/
+
+      - name: Upload the page
+        if: matrix.arch == 'arm64'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
 
       - name: Assert scan policy is present
         # trivy-config fails open: a trivy.yaml Trivy cannot read scans with
@@ -114,7 +129,7 @@ jobs:
           trivy-config: trivy.yaml
           trivyignores: .trivyignore.yaml
           # Keep in sync with the Makefile and cve-monitor.yml (see trivy.yaml).
-          version: v0.75.0
+          version: v0.76.0
 
       # No tag: this pushes the manifest under its digest only, so neither arch
       # claims :latest on its own. The merge job names them.
@@ -267,3 +282,21 @@ jobs:
         # Release exists so the tag anchors a changelog entry (categories in
         # .github/release.yml).
         run: gh release create "${TAG}" --generate-notes
+
+  pages:
+    name: Deploy the page
+    # After signing, so a failed publish never moves the page. Its own job keeps
+    # the Pages and OIDC grants off the release job.
+    needs: merge
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      pages: write
+      id-token: write
+    # Deploys from a tag, which the environment's rules must allow.
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

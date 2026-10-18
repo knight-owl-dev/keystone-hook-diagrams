@@ -1,0 +1,16 @@
+flowchart TD
+  I[Issue] --> P[Branch]
+  P --> C[Commit]
+  C --> PR{Pull request}
+  subgraph CI
+    L[Lint] --> T[Tests]
+    T --> IM[Image]
+  end
+  PR -->|opened| L
+  IM -->|red| C
+  IM -->|green| R{Review}
+  R -->|changes| C
+  R -->|approved| M[Merge]
+  M -->|release| V[Tag]
+  M -->|no release| D[Done]
+  V --> D

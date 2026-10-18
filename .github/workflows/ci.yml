@@ -96,6 +96,18 @@ jobs:
       - name: Test the image
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:ci
 
+      - name: Check the render corpus
+        run: make test-corpus IMAGE_TAG=keystone-hook-diagrams:ci CORPUS_OUT=corpus
+
+      # On drift too: a reviewer compares them against the page.
+      - name: Upload the renders
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: corpus-${{ matrix.arch }}
+          path: corpus
+          if-no-files-found: ignore
+
   # main's ruleset requires this context by name and is not in version control.
   # Routing the requirement through a gate is what lets an architecture be
   # added, removed or renamed without an out-of-band ruleset edit.
