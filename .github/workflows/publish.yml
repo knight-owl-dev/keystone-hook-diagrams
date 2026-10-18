@@ -90,9 +90,8 @@ jobs:
 
       - name: Test the image
         # The last runtime gate before a signed :latest — the scan above covers
-        # CVEs alone. CI's green is a claim about a tree; the unpinned `apk`
-        # floors resolve at build time, so a cache miss ships packages no CI run
-        # has started.
+        # CVEs alone. CI's green is a claim about a tree; this tests the image
+        # this run pushes.
         run: make test-image IMAGE_TAG=keystone-hook-diagrams:verify
 
       - name: Check the render corpus

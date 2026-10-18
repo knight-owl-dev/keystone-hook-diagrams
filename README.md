@@ -23,20 +23,13 @@ The protocol and what a hook owes are in Keystone's manual:
 | --- | --- | --- |
 | [mermaid](https://mermaid.js.org/) | npm | turns diagram text into SVG |
 | [puppeteer-core](https://pptr.dev/) | npm | drives a browser; ships none itself |
-| [Chromium](https://www.chromium.org/) | Alpine package | runs mermaid and paints the result |
-| Noto, Open Sans | Alpine packages | the families a diagram can letter in |
+| Node, [Chromium](https://www.chromium.org/), Noto, Open Sans | [`node-chromium`](https://github.com/knight-owl-dev/devops/tree/main/images/node-chromium) | runs mermaid and paints the result, in the families a diagram can letter in |
 
 npm versions are pinned in `package-lock.json`, which `make resolve` regenerates
 along with `package.json`. Both base images are pinned by manifest-list digest
 inline in their `FROM` lines, where Renovate can see them. The build resolves
-the dependency tree on `node:26-alpine`, then copies the node binary and that
-tree onto a plain `alpine`, so the published image carries no npm, npx, yarn or
-corepack.
-
-Chromium and the fonts carry no `apk` pin: Alpine keeps only the current build
-in its repository, so an exact version would break the build rather than hold it
-still. Where a CVE needs forcing, the Dockerfile names a `>=` floor, and says
-why.
+the dependency tree on `node:26-alpine3.24` and copies it onto `node-chromium`,
+whose digest freezes Node, Chromium and the fonts.
 
 mermaid runs in a browser page. The server injects `mermaid.min.js` into a blank
 one and calls it there, because mermaid measures text to lay a diagram out and so

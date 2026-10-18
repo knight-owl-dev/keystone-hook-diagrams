@@ -30,12 +30,8 @@ unverified binary source, or an unpinned dependency.
   inspect` reports it as `application/vnd.oci.image.index.v1+json`. A digest
   from `docker pull` + `docker inspect` names one architecture and breaks the
   multi-platform build.
-- **The two base digests move together.** The node binary is copied onto this
-  Alpine and linked against its musl, so a lone bump risks an ABI mismatch that
-  surfaces at container start.
-- **A CVE in a transitively installed `apk` package needs a `>=` floor.** A
-  rebuild alone keeps serving the vulnerable layer; the `RUN apk add` comment in
-  the Dockerfile says why.
+- **Chromium, the fonts and their CVEs belong to `node-chromium`.** A fix lands
+  in devops and arrives here as a digest bump, which may redraw the corpus.
 - **`.dockerignore` is an allowlist, and `scripts/lib/context.sh` reads it back
   to decide what a release watches.** A new path in the build has to be
   re-included there, or `make release` reports nothing to release over a real
