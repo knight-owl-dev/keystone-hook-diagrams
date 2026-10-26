@@ -4,7 +4,7 @@ IMAGE_TAG ?= keystone-hook-diagrams:local
 
 # The lint toolchain, pinned by manifest-list digest. The v-tag rides along for
 # readability; the digest is what resolves, so bump both together.
-CI_TOOLS_IMAGE ?= ghcr.io/knight-owl-dev/ci-tools:v1.7.0@sha256:874c21b95c53948677c55b558b4b128b38111d4ce567789cafc6344953b631cc
+CI_TOOLS_IMAGE ?= ghcr.io/knight-owl-dev/ci-tools:v1.8.1@sha256:2f3b4712e19b1d0aadf751739f472aa9dd892154f0cce29203c9ec4a36d0f75d
 
 # Whether a human is watching. Probed once; the container TTY keys off it.
 IS_TTY := $(shell test -t 0 && echo 1)
