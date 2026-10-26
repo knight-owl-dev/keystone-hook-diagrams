@@ -15,7 +15,7 @@
 #
 # The tree is pure JavaScript, so its Node need not match the runtime's. A
 # native module would: it has to build on node-chromium's Node line and musl.
-FROM node:26-alpine3.24@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS deps
+FROM node:26-alpine3.24@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS deps
 
 WORKDIR /app
 
