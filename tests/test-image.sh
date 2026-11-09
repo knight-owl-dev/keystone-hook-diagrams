@@ -103,8 +103,27 @@ probe() {
 
   wait_healthy "${name}"
   docker exec "${name}" node /tests/probe.js "${mode}"
+  stops "${name}"
 
   docker rm -f "${name}" > /dev/null
+}
+
+# 143 is the hook's own exit on SIGTERM; 137 is Docker's SIGKILL after the
+# grace period, meaning the signal went unanswered.
+stops() {
+  local name="${1}"
+  local code=""
+
+  docker stop "${name}" > /dev/null
+  code="$(docker inspect --format '{{.State.ExitCode}}' "${name}")"
+
+  if [[ "${code}" != 143 ]]; then
+    echo "FAIL: docker stop exited ${code}, expected 143" >&2
+    docker logs "${name}" >&2 || true
+    return 1
+  fi
+
+  echo "  OK    stopped on SIGTERM"
 }
 
 # The other half of the contract: with no name to bind, the hook says so rather

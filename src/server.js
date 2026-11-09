@@ -15,6 +15,7 @@
 
 const net = require('node:net');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const puppeteer = require('puppeteer-core');
 const { execFileSync } = require('node:child_process');
@@ -421,6 +422,7 @@ function refusalFrom(cause, content) {
 let browser = null;
 let renderPage = null;
 let rasterPage = null;
+let server = null;
 
 // Renders run one at a time.
 //
@@ -641,6 +643,11 @@ async function main() {
       '--disable-gpu',
       `--user-data-dir=${path.join(process.env.HOME || '/tmp', 'chromium')}`,
     ],
+    // stop() owns these. Puppeteer's SIGTERM kills Chromium and leaves the
+    // server listening, so every request fails until Docker's SIGKILL.
+    handleSIGTERM: false,
+    handleSIGINT: false,
+    handleSIGHUP: false,
   });
 
   renderPage = await browser.newPage();
@@ -677,7 +684,7 @@ async function main() {
   // request and half-closes to mark its end. Without this Node closes the whole
   // socket when the readable side ends, and the reply is written to a socket
   // that is already gone.
-  const server = net.createServer({ allowHalfOpen: true }, (connection) => {
+  server = net.createServer({ allowHalfOpen: true }, (connection) => {
     const chunks = [];
     connection.on('data', (chunk) => chunks.push(chunk));
 
@@ -717,7 +724,35 @@ async function main() {
   });
 }
 
+// ── Stopping ─────────────────────────────────────────────────────────
+
+// Drains before closing the browser: close() returns once every open
+// connection has had its reply, and a render cut short reaches the author as a
+// hook that did not answer. Docker's SIGKILL bounds a render that never ends.
+// A second signal exits at once.
+let stopping = false;
+
+async function stop(signal) {
+  const code = 128 + os.constants.signals[signal];
+  if (stopping) process.exit(code);
+  stopping = true;
+  process.stderr.write(`${signal}: stopping\n`);
+
+  try {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    await browser?.close();
+  } finally {
+    process.exit(code);
+  }
+}
+
+for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+  process.on(signal, () => stop(signal));
+}
+
 main().catch((cause) => {
+  // A stop during startup closes the browser under main(); stop() exits.
+  if (stopping) return;
   process.stderr.write(`${cause?.stack}\n`);
   process.exit(1);
 });
