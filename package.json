@@ -3,7 +3,7 @@
   "private": true,
   "type": "commonjs",
   "dependencies": {
-    "mermaid": "12.2.0",
+    "mermaid": "12.3.0",
     "puppeteer-core": "25.16.0"
   }
 }
