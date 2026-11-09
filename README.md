@@ -208,6 +208,7 @@ make lint         # hadolint, shellcheck, shfmt, biome, actionlint, markdownlint
 per corpus render and reflects `main`. A change to what the image draws fails
 CI until `make corpus` is committed, so the lockfile's history records every
 such change. CI uploads the renders for comparison against the page.
+`CORPUS_OUT=<dir>` keeps them locally.
 
 `make test-image` is what proves the image. `describe` answers from constants,
 so only a render reaches mermaid and Chromium.

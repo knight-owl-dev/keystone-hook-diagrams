@@ -247,6 +247,7 @@ help:
 	@echo "  make test-bats         Run BATS tests inside the ci-tools image"
 	@echo "  make test-image        Integration-test the built image"
 	@echo "  make test-corpus       Check the render corpus against its lockfile"
+	@echo "  make test-corpus CORPUS_OUT=dir  Keep the renders in dir"
 	@echo "  make corpus            Re-render the corpus and rewrite its lockfile"
 	@echo "  make help              Show this message"
 	@echo ""
