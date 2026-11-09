@@ -24,12 +24,13 @@ The protocol and what a hook owes are in Keystone's manual:
 | [mermaid](https://mermaid.js.org/) | npm | turns diagram text into SVG |
 | [puppeteer-core](https://pptr.dev/) | npm | drives a browser; ships none itself |
 | Node, [Chromium](https://www.chromium.org/), Noto, Open Sans | [`node-chromium`](https://github.com/knight-owl-dev/devops/tree/main/images/node-chromium) | runs mermaid and paints the result, in the families a diagram can letter in |
+| [tini](https://github.com/krallin/tini) | [`node-chromium`](https://github.com/knight-owl-dev/devops/tree/main/images/node-chromium) | PID 1: forwards signals to the server, reaps Chromium's orphans |
 
 npm versions are pinned in `package-lock.json`, which `make resolve` regenerates
 along with `package.json`. Both base images are pinned by manifest-list digest
 inline in their `FROM` lines, where Renovate can see them. The build resolves
 the dependency tree on `node:26-alpine3.24` and copies it onto `node-chromium`,
-whose digest freezes Node, Chromium and the fonts.
+whose digest freezes Node, Chromium, tini and the fonts.
 
 mermaid runs in a browser page. The server injects `mermaid.min.js` into a blank
 one and calls it there, because mermaid measures text to lay a diagram out and so
@@ -185,13 +186,17 @@ volumes:
 There is no `user:` — the hook keeps the image's own UID, which is what makes
 the `0666` socket meaningful. Keystone connects as whoever ran the build.
 
+The image runs under its own tini, so the service sets no `init:`. On
+`docker stop` the hook finishes the renders in flight and exits 143, well inside
+the default grace period.
+
 The tag and digest above are placeholders; pin both to a published release.
 
 ## Working on it
 
 ```bash
 make build        # build keystone-hook-diagrams:local
-make test-image   # start it three ways; render against each, then stop it
+make test-image   # start it three ways; render, reap and stop each
 make test-corpus  # render the corpus and check it against its lockfile
 make corpus       # re-render it and rewrite the lockfile
 make test         # the above, plus the bats suites
@@ -240,6 +245,9 @@ Each of these was a bug before it was a rule.
   hook against a 30 second budget. Warm, a render is about 60 ms; launching a
   browser per diagram would spend that budget on process startup. This is why it
   is a Node server rather than socat in front of a CLI.
+- **The server handles its own signals.** Puppeteer's SIGTERM handler killed
+  Chromium and left the server listening. Every stop then waited out the grace
+  period for a SIGKILL, and any request in between failed.
 - **The caller declares the healthcheck; the image ships none.** It tests for the
   socket, and only the caller knows that path. Started and listening are different
   moments, and Keystone looks once, before the build begins. Losing that race

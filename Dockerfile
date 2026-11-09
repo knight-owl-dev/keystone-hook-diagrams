@@ -30,7 +30,7 @@ RUN npm ci --omit=dev
 # the digest is what freezes them: every build, local or CI, renders with the
 # same bytes, which the render corpus's lockfile depends on. A CVE in them is
 # fixed there and arrives as a digest bump.
-FROM ghcr.io/knight-owl-dev/node-chromium:v1.8.0@sha256:f24cf1d386cb500526aceaa28dfee856036d77400fee982a7051e03739f77c13
+FROM ghcr.io/knight-owl-dev/node-chromium:v1.8.2@sha256:49298a3225789f3f2bfe913dda227f52064e685ec5c8f3fe48b783ccfe96e44a
 
 COPY --from=deps /app/node_modules /app/node_modules
 COPY src /app/src
@@ -65,4 +65,6 @@ LABEL org.opencontainers.image.description="Mermaid diagram rendering hook for K
 # names it from outside. The caller that sets the variable declares the matching
 # check. See the README for what that check has to cover.
 
-ENTRYPOINT ["node", "/app/src/server.js"]
+# node-chromium's README says why tini, -s and -g. -g cannot cut stop()'s drain
+# short: Puppeteer starts Chromium detached, in a process group of its own.
+ENTRYPOINT ["/sbin/tini", "-s", "-g", "--", "node", "/app/src/server.js"]

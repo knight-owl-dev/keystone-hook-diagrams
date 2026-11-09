@@ -14,6 +14,10 @@ IS_TTY := $(shell test -t 0 && echo 1)
 # Override with `DOCKER_TTY=` (empty) or `DOCKER_TTY=-t` (force) as needed.
 DOCKER_TTY ?= $(if $(IS_TTY),-t)
 
+# Every container runs under Docker's init, which is tini without -g.
+# TINI_KILL_PROCESS_GROUP=1 turns -g on, so Ctrl-C reaches make's recipe too.
+DOCKER_RUN ?= docker run --rm --init -e TINI_KILL_PROCESS_GROUP=1 $(DOCKER_TTY)
+
 .PHONY: sync resolve build scan clean set-version get-version release \
 	lint lint-fix lint-docker lint-sh lint-sh-fmt lint-sh-fmt-fix lint-js lint-js-fix \
 	lint-actions lint-md lint-md-fix lint-spell test test-bats test-image test-corpus corpus help
@@ -77,7 +81,7 @@ TRIVY_IMAGE := aquasec/trivy:0.76.2
 
 scan: build
 	@echo "Scanning $(IMAGE_TAG) for vulnerabilities$(if $(NO_IGNORE), (suppressions disabled),)..."
-	@docker run --rm $(DOCKER_TTY) \
+	@$(DOCKER_RUN) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v "$(CURDIR):/repo:ro" \
 		-w /repo \
@@ -99,7 +103,7 @@ LINT_TARGETS := lint-docker lint-sh lint-sh-fmt lint-js lint-actions lint-md lin
 # GITHUB_TOKEN is forwarded because validate-action-pins resolves each pinned
 # SHA against the API, and 60 anonymous requests an hour does not cover a
 # workflow set. Unset locally, it passes nothing.
-LINT_RUNNER ?= docker run --rm $(DOCKER_TTY) -e GITHUB_TOKEN \
+LINT_RUNNER ?= $(DOCKER_RUN) -e GITHUB_TOKEN \
 	-v "$(CURDIR):/work" -w /work $(CI_TOOLS_IMAGE) make
 
 lint:
@@ -189,7 +193,7 @@ lint-spell:
 # Run BATS tests. BATS_RUNNER defaults to running inside the ci-tools container,
 # so `make test-bats` works from a stock macOS host without bats installed. CI
 # (already inside the container) overrides with `BATS_RUNNER=bats`.
-BATS_RUNNER ?= docker run --rm $(DOCKER_TTY) \
+BATS_RUNNER ?= $(DOCKER_RUN) \
 	-v "$(CURDIR):/work" -w /work $(CI_TOOLS_IMAGE) bats
 
 # bats defaults to TAP whatever it is attached to — its own --help claims

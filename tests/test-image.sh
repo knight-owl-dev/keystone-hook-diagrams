@@ -6,7 +6,7 @@ set -euo pipefail
 # This script owns the container lifecycle; probe.js does the asking, over the
 # socket, from inside. It runs on the host because the in-container path does
 # not fit: no bash, an ENTRYPOINT that owns argv, and nothing to interrogate —
-# a hook is tested by whether it renders, and by whether it stops when told.
+# a hook is tested by whether it renders, reaps and stops when told.
 #
 # Three containers, because a diagnostic is decided by the environment the hook
 # started with and cannot change once it is listening.
@@ -14,7 +14,7 @@ set -euo pipefail
 # Usage: make test-image
 #
 # Exit codes:
-#   0 - The hook describes, renders and stops correctly
+#   0 - The hook describes, renders, reaps and stops correctly
 #   1 - A check failed, or a container never became healthy
 
 REPO_ROOT="$(cd "$(dirname "${0}")/.." && pwd)"
@@ -103,13 +103,40 @@ probe() {
 
   wait_healthy "${name}"
   docker exec "${name}" node /tests/probe.js "${mode}"
+  reaps "${name}"
   stops "${name}"
 
   docker rm -f "${name}" > /dev/null
 }
 
-# The log line, because 143 alone is also node dying on SIGTERM's default
-# action once an init forwards the signal. 137 is Docker's SIGKILL.
+# Chromium's crashpad handlers start out orphaned, so killing one stands in for
+# a helper dying mid-run. Under node as PID 1 it stayed a zombie.
+reaps() {
+  local name="${1}"
+  local orphan=""
+  local zombies=""
+
+  orphan="$(docker exec "${name}" ps -o pid,ppid,comm | awk '$2 == 1 && $3 == "chrome_crashpad" { print $1; exit }')"
+  if [[ -z "${orphan}" ]]; then
+    echo "FAIL: no orphaned chrome_crashpad to kill" >&2
+    return 1
+  fi
+
+  docker exec "${name}" kill "${orphan}"
+  sleep 1
+  zombies="$(docker exec "${name}" ps -o pid,stat,comm | awk '$2 ~ /^Z/')"
+
+  if [[ -n "${zombies}" ]]; then
+    echo "FAIL: PID 1 left zombies:" >&2
+    echo "${zombies}" >&2
+    return 1
+  fi
+
+  echo "  OK    reaped an orphan"
+}
+
+# The log line, because under tini 143 is also node dying on SIGTERM's default
+# action. 137 is Docker's SIGKILL.
 stops() {
   local name="${1}"
   local code=""
