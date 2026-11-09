@@ -6,7 +6,7 @@ set -euo pipefail
 # This script owns the container lifecycle; probe.js does the asking, over the
 # socket, from inside. It runs on the host because the in-container path does
 # not fit: no bash, an ENTRYPOINT that owns argv, and nothing to interrogate —
-# a hook is tested by whether it renders.
+# a hook is tested by whether it renders, and by whether it stops when told.
 #
 # Three containers, because a diagnostic is decided by the environment the hook
 # started with and cannot change once it is listening.
@@ -14,7 +14,7 @@ set -euo pipefail
 # Usage: make test-image
 #
 # Exit codes:
-#   0 - The hook describes and renders correctly
+#   0 - The hook describes, renders and stops correctly
 #   1 - A check failed, or a container never became healthy
 
 REPO_ROOT="$(cd "$(dirname "${0}")/.." && pwd)"
@@ -103,8 +103,29 @@ probe() {
 
   wait_healthy "${name}"
   docker exec "${name}" node /tests/probe.js "${mode}"
+  stops "${name}"
 
   docker rm -f "${name}" > /dev/null
+}
+
+# The log line, because 143 alone is also node dying on SIGTERM's default
+# action once an init forwards the signal. 137 is Docker's SIGKILL.
+stops() {
+  local name="${1}"
+  local code=""
+  local logs=""
+
+  docker stop "${name}" > /dev/null
+  code="$(docker inspect --format '{{.State.ExitCode}}' "${name}")"
+  logs="$(docker logs "${name}" 2>&1)"
+
+  if [[ "${code}" != 143 || "${logs}" != *"SIGTERM: stopping"* ]]; then
+    echo "FAIL: docker stop exited ${code}, expected 143 from the hook's handler" >&2
+    echo "${logs}" >&2
+    return 1
+  fi
+
+  echo "  OK    stopped on SIGTERM"
 }
 
 # The other half of the contract: with no name to bind, the hook says so rather
