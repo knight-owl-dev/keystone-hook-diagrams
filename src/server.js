@@ -15,6 +15,7 @@
 
 const net = require('node:net');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const puppeteer = require('puppeteer-core');
 const { execFileSync } = require('node:child_process');
@@ -421,6 +422,11 @@ function refusalFrom(cause, content) {
 let browser = null;
 let renderPage = null;
 let rasterPage = null;
+let server = null;
+
+// Connections whose request has not ended. stop() drops them: there is no
+// render to drain, and an idle one would hold server.close() until SIGKILL.
+const unread = new Set();
 
 // Renders run one at a time.
 //
@@ -641,6 +647,11 @@ async function main() {
       '--disable-gpu',
       `--user-data-dir=${path.join(process.env.HOME || '/tmp', 'chromium')}`,
     ],
+    // stop() owns these. Puppeteer's SIGTERM kills Chromium and leaves the
+    // server listening, so every request fails until Docker's SIGKILL.
+    handleSIGTERM: false,
+    handleSIGINT: false,
+    handleSIGHUP: false,
   });
 
   renderPage = await browser.newPage();
@@ -670,6 +681,9 @@ async function main() {
     deviceScaleFactor: RASTER_SCALE,
   });
 
+  // A stop during startup found no server to close.
+  if (stopping) return;
+
   // A socket left by a hard kill would otherwise refuse every connection.
   fs.rmSync(SOCKET, { force: true });
 
@@ -677,12 +691,15 @@ async function main() {
   // request and half-closes to mark its end. Without this Node closes the whole
   // socket when the readable side ends, and the reply is written to a socket
   // that is already gone.
-  const server = net.createServer({ allowHalfOpen: true }, (connection) => {
+  server = net.createServer({ allowHalfOpen: true }, (connection) => {
     const chunks = [];
+    unread.add(connection);
+    connection.on('close', () => unread.delete(connection));
     connection.on('data', (chunk) => chunks.push(chunk));
 
     // Keystone writes the request and half-closes, so end is the whole request.
     connection.on('end', async () => {
+      unread.delete(connection);
       let reply;
       try {
         reply = await answer(
@@ -717,7 +734,41 @@ async function main() {
   });
 }
 
+// ── Stopping ─────────────────────────────────────────────────────────
+
+// Drains before closing the browser: a render cut short reaches the author as a
+// hook that did not answer. Docker's SIGKILL bounds a render that never ends.
+let stopping = false;
+
+async function stop(signal) {
+  const code = 128 + os.constants.signals[signal];
+  if (stopping) {
+    // process.exit skips the unlink server.close() does, and a stale socket on
+    // the shared volume passes the healthcheck before the next start clears it.
+    fs.rmSync(SOCKET, { force: true });
+    process.exit(code);
+  }
+  stopping = true;
+  process.stderr.write(`${signal}: stopping\n`);
+
+  try {
+    if (server) {
+      const closed = new Promise((resolve) => server.close(resolve));
+      for (const connection of unread) connection.destroy();
+      await closed;
+    }
+    await browser?.close();
+  } finally {
+    process.exit(code);
+  }
+}
+
+for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+  process.on(signal, () => stop(signal));
+}
+
 main().catch((cause) => {
   process.stderr.write(`${cause?.stack}\n`);
-  process.exit(1);
+  // A stop during startup closes the browser under main(); stop() exits.
+  if (!stopping) process.exit(1);
 });
