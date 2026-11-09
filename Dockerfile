@@ -15,7 +15,7 @@
 #
 # The tree is pure JavaScript, so its Node need not match the runtime's. A
 # native module would: it has to build on node-chromium's Node line and musl.
-FROM node:26-alpine3.24@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS deps
+FROM node:26-alpine3.24@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS deps
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ RUN npm ci --omit=dev
 # the digest is what freezes them: every build, local or CI, renders with the
 # same bytes, which the render corpus's lockfile depends on. A CVE in them is
 # fixed there and arrives as a digest bump.
-FROM ghcr.io/knight-owl-dev/node-chromium:v1.7.0@sha256:2bb4332882e4f7f5f633a8763e7e46706ec8190f2aaae2d2d9f8da387c79c956
+FROM ghcr.io/knight-owl-dev/node-chromium:v1.8.0@sha256:f24cf1d386cb500526aceaa28dfee856036d77400fee982a7051e03739f77c13
 
 COPY --from=deps /app/node_modules /app/node_modules
 COPY src /app/src
