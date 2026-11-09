@@ -196,7 +196,7 @@ The tag and digest above are placeholders; pin both to a published release.
 
 ```bash
 make build        # build keystone-hook-diagrams:local
-make test-image   # start it three ways; render, reap and stop each
+make test-image   # run it; check the protocol, renders and lifecycle
 make test-corpus  # render the corpus and check it against its lockfile
 make corpus       # re-render it and rewrite the lockfile
 make test         # the above, plus the bats suites
@@ -208,6 +208,7 @@ make lint         # hadolint, shellcheck, shfmt, biome, actionlint, markdownlint
 per corpus render and reflects `main`. A change to what the image draws fails
 CI until `make corpus` is committed, so the lockfile's history records every
 such change. CI uploads the renders for comparison against the page.
+`CORPUS_OUT=<dir>` keeps them locally.
 
 `make test-image` is what proves the image. `describe` answers from constants,
 so only a render reaches mermaid and Chromium.

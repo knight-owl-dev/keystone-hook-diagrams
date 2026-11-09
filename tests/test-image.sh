@@ -8,8 +8,8 @@ set -euo pipefail
 # not fit: no bash, an ENTRYPOINT that owns argv, and nothing to interrogate —
 # a hook is tested by whether it renders, reaps and stops when told.
 #
-# Three containers, because a diagnostic is decided by the environment the hook
-# started with and cannot change once it is listening.
+# Four containers, because a diagnostic, a layout and a look are decided by the
+# environment the hook started with and cannot change once it is listening.
 #
 # Usage: make test-image
 #
@@ -186,5 +186,8 @@ probe no-diagnostics -e "KEYSTONE_DIAGRAMS_FONT=${PRESENT_FONT}"
 
 echo "House style, a font it does not:"
 probe font-warning -e "KEYSTONE_DIAGRAMS_FONT=${ABSENT_FONT}"
+
+echo "Labels, at the other layout and look:"
+probe labels -e KEYSTONE_DIAGRAMS_LAYOUT=elk -e KEYSTONE_DIAGRAMS_LOOK=handDrawn
 
 echo "OK"

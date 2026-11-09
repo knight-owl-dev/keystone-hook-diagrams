@@ -14,9 +14,11 @@
 //
 // Runs inside the container over the socket; node builtins only.
 //
-// Usage: node probe.js [render|no-diagnostics|font-warning]
+// Usage: node probe.js [render|no-diagnostics|font-warning|labels]
 
+const fs = require('node:fs');
 const net = require('node:net');
+const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 // Told the path, never guessing it: docker exec inherits the container's
@@ -126,6 +128,36 @@ function decode(reply) {
 
 // ── Checks ───────────────────────────────────────────────────────────
 
+// The corpus as well as DIAGRAM: each diagram type draws its own labels, and a
+// new one may not honour `htmlLabels: false`.
+//
+// A readable assertion, not a parse: node has no XML parser. HTML labels are
+// the one source of both faults — a void element XML rejects, and a
+// `<foreignObject>` many readers draw as an empty box.
+async function labelsAreSvgText() {
+  const corpus = path.join(__dirname, 'corpus');
+  const sources = [['probe', DIAGRAM]];
+  for (const file of fs.readdirSync(corpus).sort()) {
+    if (!file.endsWith('.mmd')) continue;
+    const name = path.basename(file, '.mmd');
+    sources.push([name, fs.readFileSync(path.join(corpus, file), 'utf8')]);
+  }
+
+  for (const [name, content] of sources) {
+    await check(`labels are SVG text: ${name}`, async () => {
+      const reply = await transform('epub', content);
+      expect(!reply.error, JSON.stringify(reply.error));
+      const svg = decode(reply).toString('utf8');
+      expect(
+        !svg.includes('<foreignObject'),
+        'labels are HTML in foreignObject',
+      );
+      const unclosed = /<(br|hr|img)\b[^>]*(?<!\/)>/.exec(svg);
+      expect(!unclosed, `unclosed ${unclosed?.[0]} — the SVG is not XML`);
+    });
+  }
+}
+
 async function main() {
   const described = await ask({ op: 'describe' });
 
@@ -217,6 +249,11 @@ async function main() {
       );
       return warning.problem;
     });
+    return;
+  }
+
+  if (MODE === 'labels') {
+    await labelsAreSvgText();
     return;
   }
 
@@ -315,16 +352,7 @@ async function main() {
     return painted[0];
   });
 
-  // A readable assertion, not a parse: node has no XML parser. HTML labels are
-  // the one source of both faults — a void element XML rejects, and a
-  // `<foreignObject>` many readers draw as an empty box.
-  await check('the vector labels are SVG text', () => {
-    expect(svg, 'epub did not render');
-    expect(!svg.includes('<foreignObject'), 'labels are HTML in foreignObject');
-    const unclosed = /<(br|hr|img)\b[^>]*(?<!\/)>/.exec(svg);
-    expect(!unclosed, `unclosed ${unclosed?.[0]} — the SVG is not XML`);
-    return 'no foreignObject, no unclosed void element';
-  });
+  await labelsAreSvgText();
 
   await check('the title is alt text, escaped', () => {
     expect(replies.epub, 'epub did not render');
