@@ -191,7 +191,7 @@ The tag and digest above are placeholders; pin both to a published release.
 
 ```bash
 make build        # build keystone-hook-diagrams:local
-make test-image   # start it three ways and render against each
+make test-image   # start it three ways; render against each, then stop it
 make test-corpus  # render the corpus and check it against its lockfile
 make corpus       # re-render it and rewrite the lockfile
 make test         # the above, plus the bats suites

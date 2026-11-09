@@ -424,6 +424,10 @@ let renderPage = null;
 let rasterPage = null;
 let server = null;
 
+// Connections whose request has not ended. stop() drops them: there is no
+// render to drain, and an idle one would hold server.close() until SIGKILL.
+const unread = new Set();
+
 // Renders run one at a time.
 //
 // The two pages above are shared, and a render is several round trips to one of
@@ -677,6 +681,9 @@ async function main() {
     deviceScaleFactor: RASTER_SCALE,
   });
 
+  // A stop during startup found no server to close.
+  if (stopping) return;
+
   // A socket left by a hard kill would otherwise refuse every connection.
   fs.rmSync(SOCKET, { force: true });
 
@@ -686,10 +693,13 @@ async function main() {
   // that is already gone.
   server = net.createServer({ allowHalfOpen: true }, (connection) => {
     const chunks = [];
+    unread.add(connection);
+    connection.on('close', () => unread.delete(connection));
     connection.on('data', (chunk) => chunks.push(chunk));
 
     // Keystone writes the request and half-closes, so end is the whole request.
     connection.on('end', async () => {
+      unread.delete(connection);
       let reply;
       try {
         reply = await answer(
@@ -726,20 +736,27 @@ async function main() {
 
 // ── Stopping ─────────────────────────────────────────────────────────
 
-// Drains before closing the browser: close() returns once every open
-// connection has had its reply, and a render cut short reaches the author as a
+// Drains before closing the browser: a render cut short reaches the author as a
 // hook that did not answer. Docker's SIGKILL bounds a render that never ends.
-// A second signal exits at once.
 let stopping = false;
 
 async function stop(signal) {
   const code = 128 + os.constants.signals[signal];
-  if (stopping) process.exit(code);
+  if (stopping) {
+    // process.exit skips the unlink server.close() does, and a stale socket on
+    // the shared volume passes the healthcheck before the next start clears it.
+    fs.rmSync(SOCKET, { force: true });
+    process.exit(code);
+  }
   stopping = true;
   process.stderr.write(`${signal}: stopping\n`);
 
   try {
-    if (server) await new Promise((resolve) => server.close(resolve));
+    if (server) {
+      const closed = new Promise((resolve) => server.close(resolve));
+      for (const connection of unread) connection.destroy();
+      await closed;
+    }
     await browser?.close();
   } finally {
     process.exit(code);
@@ -751,8 +768,7 @@ for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
 }
 
 main().catch((cause) => {
-  // A stop during startup closes the browser under main(); stop() exits.
-  if (stopping) return;
   process.stderr.write(`${cause?.stack}\n`);
-  process.exit(1);
+  // A stop during startup closes the browser under main(); stop() exits.
+  if (!stopping) process.exit(1);
 });
