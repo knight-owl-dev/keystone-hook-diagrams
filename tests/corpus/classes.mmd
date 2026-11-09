@@ -1,0 +1,17 @@
+classDiagram
+  class Hook {
+    +String socket
+    +describe() Reply
+    +transform(block) Reply
+  }
+  class Reply {
+    +String body
+    +List~Asset~ assets
+  }
+  class Asset {
+    +String name
+    +bytes data
+  }
+  Hook ..> Reply : one per<br/>request
+  Reply "1" *-- "0..*" Asset : carries
+  Diagnostic --|> Reply

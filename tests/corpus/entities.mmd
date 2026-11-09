@@ -1,0 +1,16 @@
+erDiagram
+  BOOK ||--o{ CHAPTER : contains
+  CHAPTER ||--o{ FENCE : holds
+  FENCE }o--|| RENDER : "cached<br/>as"
+  BOOK {
+    string title
+    string template
+  }
+  FENCE {
+    string target
+    text source
+  }
+  RENDER {
+    string identity PK
+    blob asset
+  }

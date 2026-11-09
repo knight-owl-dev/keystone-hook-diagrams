@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant K as Keystone
+  participant H as Hook
+  K->>H: describe
+  H-->>K: targets, formats
+  loop each fence
+    K->>H: transform
+    alt renders
+      H-->>K: Markdown<br/>and asset
+    else refused
+      H-->>K: diagnostic
+    end
+  end
+  Note over K,H: one socket per request
