@@ -13,6 +13,7 @@
     "aquasec",
     "aquasecurity",
     "buildcache",
+    "crashpad",
     "dagre",
     "epub",
     "esbuild",
@@ -43,6 +44,7 @@
     "socat",
     "startswith",
     "subshell",
+    "tini",
     "tmpfs",
     "trivyignores",
     "Verdana"
