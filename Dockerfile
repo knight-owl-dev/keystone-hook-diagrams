@@ -30,7 +30,7 @@ RUN npm ci --omit=dev
 # the digest is what freezes them: every build, local or CI, renders with the
 # same bytes, which the render corpus's lockfile depends on. A CVE in them is
 # fixed there and arrives as a digest bump.
-FROM ghcr.io/knight-owl-dev/node-chromium:v1.8.2@sha256:49298a3225789f3f2bfe913dda227f52064e685ec5c8f3fe48b783ccfe96e44a
+FROM ghcr.io/knight-owl-dev/node-chromium:v1.8.4@sha256:99687b1b6f1ad3ef4cd7d22d1bb8ffed95841d50920a27a3996535c480d8a583
 
 COPY --from=deps /app/node_modules /app/node_modules
 COPY src /app/src
